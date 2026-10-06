@@ -30,9 +30,13 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      redis:
+        condition: service_healthy
+      seaweedfs:
+        condition: service_started
     networks:
       - test-net
-    command: ["./geoguide_api", "-config", "config/config.yaml"]
+    command: ["./geoguide_api", "-config", "config/config.ci.yaml"]
 
   tester:
     build:
@@ -56,25 +60,46 @@ services:
       - |
         set -e
         echo "=== UNIT TESTS ==="
-        go test -v ./internal/usecase/... ./internal/repository/...
+        go test -v ./internal/usecase/... ./internal/repository/... \
+          2>&1 | tee /tmp/unit.log
 
         echo "=== INTEGRATION TESTS ==="
-        go test -v -tags=integration -p 1 \
+        go test -v -tags=postgres -p 1 \
           -coverprofile=/app/coverage/coverage.out \
-          ./internal/repository/... ./internal/usecase/...
+          ./internal/repository/... ./internal/usecase/... \
+          2>&1 | tee /tmp/integration.log
 
         echo "=== E2E TESTS ==="
-        go test -v -timeout 10m ./internal/e2e/...
+        go test -v -timeout 10m ./internal/e2e/... \
+          2>&1 | tee /tmp/e2e.log
 
         echo "=== REPORT ==="
         mkdir -p /app/coverage /app/allure-results
-        go-junit-report < /app/coverage/coverage.out > /app/allure-results/junit-report.xml
+        cat /tmp/unit.log /tmp/integration.log /tmp/e2e.log \
+          | go-junit-report > /app/allure-results/junit-report.xml
         gocov convert /app/coverage/coverage.out > /app/coverage/coverage.json
 
         echo "=== ALL TESTS PASSED ==="
     volumes:
       - ./coverage:/app/coverage
       - ./allure-results:/app/allure-results
+  redis:
+    image: redis:7-alpine
+    networks:
+      - test-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  seaweedfs:
+    image: chrislusf/seaweedfs:latest
+    command: server -s3 -s3.port=8333
+    ports:
+      - "8333:8333"
+    networks:
+      - test-net
 
 networks:
   test-net:

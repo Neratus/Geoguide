@@ -194,8 +194,12 @@ clean-docker:
 
 test-ci:
 	@echo "$(CYAN)Запуск CI тестового стенда (App + Postgres + Tester)...$(RESET)"
-	@docker compose -f docker-compose.ci.yml up --build --abort-on-container-exit --exit-code-from tester
-	@echo "$(GREEN)CI тесты завершены. Отчеты в ./allure-results и ./coverage$(RESET)"
+	@docker compose -f docker-compose.ci.yml up \
+	    --build --abort-on-container-exit --exit-code-from tester; \
+	STATUS=$$?; \
+	echo "$(YELLOW)Очистка CI Docker-окружения...$(RESET)"; \
+	docker compose -f docker-compose.ci.yml down -v --remove-orphans; \
+	exit $$STATUS
 
 clean-ci:
 	@echo "$(YELLOW)Очистка CI Docker-окружения...$(RESET)"
