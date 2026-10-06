@@ -1,0 +1,17 @@
+version: "2"
+sql:
+  - engine: "postgresql"
+    queries: "/queries"
+    schema: "./migrations"
+    gen:
+      go:
+        package: "postgreSQL"
+        out: "./internal/repository/postgres/sqlc"
+        sql_package: "pgx/v5"
+        emit_json_tags: true
+        emit_interface: true
+        overrides:
+          - db_type: "varchar"
+            go_type: "string"
+          - db_type: "text"
+            go_type: "string"

@@ -1,0 +1,55 @@
+max_review_comment_length: 2000
+min_rating: 1
+max_rating: 5
+
+max_city_name_length: 255
+max_city_description_length: 2000
+max_city_timezone_length: 50
+max_city_travel_tips_length: 2000
+
+max_country_name_length: 255
+max_currency_length: 3
+max_language_length: 100
+max_phone_code_length: 10
+max_best_season_length: 50
+max_religion_length: 100
+
+max_place_name_length: 255
+max_place_category_length: 100
+max_place_address_length: 500
+max_place_description_length: 2000
+max_opening_hours_length: 500
+max_price_info_length: 500
+max_contact_phone_length: 50
+max_website_length: 255
+
+max_trip_title_length: 255
+max_trip_notes_length: 2000
+default_trip_status: "DRAFT"
+max_places_per_trip: 50
+session_ttl_hours: 24
+
+max_username_length: 100
+max_email_length: 255
+min_password_length: 6
+max_password_length: 255
+max_phone_length: 50
+max_country_residence: 100
+
+max_static_page_slug_length: 100
+max_static_page_title_length: 255
+max_static_page_content_length: 10000
+max_static_page_meta_description_length: 500
+max_static_page_image_url_length: 500
+max_static_page_image_alt_length: 255
+
+max_trip_place_notes_length: 2000
+
+max_holiday_name_length: 255
+
+max_district_name_length: 255
+max_district_description_length: 1024
+
+max_transport_node_name_length: 255
+max_transport_node_type_length: 50
+max_transport_node_address_length: 500

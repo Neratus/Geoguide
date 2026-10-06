@@ -1,0 +1,74 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: app_user
+      POSTGRES_PASSWORD: app_password
+      POSTGRES_DB: geoguide_e2e
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app_user -d geoguide_e2e"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - test-net
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=app_user
+      - DB_PASSWORD=app_password
+      - DB_NAME=geoguide_e2e
+      - DB_SSLMODE=disable
+      - APP_PORT=8080
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - test-net
+    command: ["./geoguide_api", "-config", "config/config.yaml"] 
+
+  tester:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    environment:
+      - APP_URL=http://app:8080 
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=app_user
+      - DB_PASSWORD=app_password
+      - DB_NAME=geoguide_e2e
+    depends_on:
+      app:
+        condition: service_started
+    networks:
+      - test-net
+    command: >
+      sh -c "
+        echo '=== НАЧАЛО E2E И ИНТЕГРАЦИОННЫХ ТЕСТОВ ===' &&
+        go test -v -tags=integration -p 1 ./internal/repository/... ./internal/usecase/... &&
+        go test -v -timeout 10m ./internal/e2e/... &&
+        echo '=== ГЕНЕРАЦИЯ ОТЧЕТОВ ===' &&
+        mkdir -p /app/coverage /app/allure-results &&
+        go test -v -tags=integration -coverprofile=/app/coverage/coverage.out ./internal/... &&
+        gocov convert /app/coverage/coverage.out > /app/coverage/coverage.json &&
+        cat /app/coverage/coverage.out | go-junit-report > /app/allure-results/junit-report.xml &&
+        allure generate /app/allure-results -o /app/allure-results/allure-report --clean &&
+        echo '=== ТЕСТЫ УСПЕШНО ЗАВЕРШЕНЫ ==='
+      "
+    volumes:
+      - ./coverage:/app/coverage
+      - ./allure-results:/app/allure-results
+
+networks:
+  test-net:
+    driver: bridge

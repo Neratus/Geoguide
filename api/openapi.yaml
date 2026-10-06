@@ -1,0 +1,2113 @@
+openapi: 3.1.0
+info:
+  title: GeoGuide API
+  description: |
+    API для географического справочника и планировщика путешествий.
+    Поддерживает регистрацию, 2FA, управление поездками, отзывами и аналитику.
+  version: 1.0.0
+  contact:
+    name: GeoGuide Team
+servers:
+  - url: http://localhost:8080
+    description: Development server
+
+tags:
+  - name: Auth
+    description: Регистрация, аутентификация, 2FA и управление профилем пользователя.
+  - name: Admin
+    description: Административные и модераторские операции.
+  - name: Countries
+    description: Справочник стран.
+  - name: Cities
+    description: Справочник городов, районов и транспортных узлов.
+  - name: Places
+    description: Достопримечательности и места.
+  - name: Trips
+    description: Планирование и управление поездками.
+  - name: Reviews
+    description: Отзывы о местах.
+  - name: Content
+    description: Праздники и статические страницы.
+  - name: Analytics
+    description: Аналитические отчёты и SSE-стриминг.
+  - name: Favourites
+    description: Избранные места пользователя.
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        error:
+          type: string
+          maxLength: 255
+          pattern: '^[^\x00-\x1F]*$'
+        details:
+          type: string
+          maxLength: 1000
+          pattern: '^[^\x00-\x1F]*$'
+      required: [error]
+
+    Coordinates:
+      type: object
+      additionalProperties: false
+      properties:
+        lat: { type: number, format: double, minimum: -90, maximum: 90 }
+        lng: { type: number, format: double, minimum: -180, maximum: 180 }
+      required: [lat, lng]
+
+    # ---------- Auth ----------
+    RegisterUserRequest:
+      type: object
+      additionalProperties: false
+      required: [username, email, password]
+      properties:
+        username: { type: string, maxLength: 100, pattern: '^[^\x00-\x1F]*$' }
+        email:
+          {
+            type: string,
+            format: email,
+            maxLength: 255,
+            pattern: '^[^@\s]+@[^@\s]+\.[^@\s]+$',
+          }
+        password:
+          {
+            type: string,
+            minLength: 6,
+            maxLength: 72,
+            pattern: '^[^\x00-\x1F]*$',
+          }
+        phone: { type: string, maxLength: 50, pattern: '^[^\x00-\x1F]*$' }
+        birthDate:
+          {
+            type: string,
+            format: date,
+            maxLength: 10,
+            pattern: '^\d{4}-\d{2}-\d{2}$',
+          }
+        countryOfResidence:
+          { type: string, maxLength: 100, pattern: '^[^\x00-\x1F]*$' }
+
+    RegisterUserResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          {
+            type: string,
+            format: uuid,
+            maxLength: 36,
+            pattern: "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+          }
+        username: { type: string, maxLength: 100, pattern: '^[^\x00-\x1F]*$' }
+        email:
+          {
+            type: string,
+            format: email,
+            maxLength: 255,
+            pattern: '^[^@\s]+@[^@\s]+\.[^@\s]+$',
+          }
+        message: { type: string, maxLength: 255, pattern: '^[^\x00-\x1F]*$' }
+
+    VerifyContactRequest:
+      type: object
+      additionalProperties: false
+      required: [userId, contact, code]
+      properties:
+        userId:
+          {
+            type: string,
+            format: uuid,
+            maxLength: 36,
+            pattern: "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+          }
+        contact: { type: string, maxLength: 255, pattern: '^[^\x00-\x1F]*$' }
+        code: { type: string, minLength: 6, maxLength: 6, pattern: '^\d{6}$' }
+
+    LoginUserRequest:
+      type: object
+      additionalProperties: false
+      required: [username, password]
+      properties:
+        username: { type: string, maxLength: 100, pattern: '^[^\x00-\x1F]*$' }
+        password: { type: string, maxLength: 72, pattern: '^[^\x00-\x1F]*$' }
+
+    LoginUserResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          {
+            type: string,
+            format: uuid,
+            maxLength: 36,
+            pattern: "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+          }
+        username: { type: string, maxLength: 100, pattern: '^[^\x00-\x1F]*$' }
+        email:
+          {
+            type: string,
+            format: email,
+            maxLength: 255,
+            pattern: '^[^@\s]+@[^@\s]+\.[^@\s]+$',
+          }
+        token: { type: string, maxLength: 1000, pattern: '^[A-Za-z0-9._\-]+$' }
+        requiresTwoFactor: { type: boolean }
+        challengeId:
+          { type: string, maxLength: 100, pattern: '^[^\x00-\x1F]*$' }
+
+    EnableTwoFactorRequest:
+      type: object
+      additionalProperties: false
+      required: [userId, secret, code]
+      properties:
+        userId:
+          {
+            type: string,
+            format: uuid,
+            maxLength: 36,
+            pattern: "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+          }
+        secret: { type: string, maxLength: 100, pattern: "^[A-Z2-7=]+$" }
+        code: { type: string, maxLength: 10, pattern: '^\d{1,10}$' }
+
+    EnableTwoFactorResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        backupCodes:
+          type: array
+          maxItems: 20
+          items: { type: string, maxLength: 20, pattern: "^[A-Z0-9-]+$" }
+        otpauthUri:
+          { type: string, maxLength: 500, pattern: '^otpauth://[^\x00-\x1F]+$' }
+
+    VerifyTwoFactorRequest:
+      type: object
+      additionalProperties: false
+      required: [challengeId, code]
+      properties:
+        challengeId:
+          { type: string, maxLength: 100, pattern: '^[^\x00-\x1F]*$' }
+        code: { type: string, maxLength: 10, pattern: '^\d{1,10}$' }
+
+    TwoFactorResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        token: { type: string, maxLength: 1000, pattern: '^[A-Za-z0-9._\-]+$' }
+
+    GetUserProfileResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          {
+            type: string,
+            format: uuid,
+            maxLength: 36,
+            pattern: "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+          }
+        username: { type: string, maxLength: 100, pattern: '^[^\x00-\x1F]*$' }
+        email:
+          {
+            type: string,
+            format: email,
+            maxLength: 255,
+            pattern: '^[^@\s]+@[^@\s]+\.[^@\s]+$',
+          }
+        phone: { type: string, maxLength: 50, pattern: '^[^\x00-\x1F]*$' }
+        registeredAt:
+          {
+            type: string,
+            format: date-time,
+            maxLength: 30,
+            pattern: '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z?$',
+          }
+        birthDate:
+          {
+            type: string,
+            format: date,
+            maxLength: 10,
+            pattern: '^\d{4}-\d{2}-\d{2}$',
+          }
+        countryOfResidence:
+          { type: string, maxLength: 100, pattern: '^[^\x00-\x1F]*$' }
+        avatarUrl:
+          { type: string, maxLength: 500, pattern: '^https?://[^\x00-\x1F]+$' }
+        favoriteCategories:
+          type: array
+          maxItems: 50
+          items: { type: string, maxLength: 50, pattern: '^[^\x00-\x1F]*$' }
+        isBlocked: { type: boolean }
+        role:
+          {
+            type: string,
+            enum: [user, moderator, analyst],
+            maxLength: 20,
+            pattern: "^[a-z]+$",
+          }
+
+    UpdateUserProfileRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        username: { type: string, maxLength: 100, pattern: '^[^\x00-\x1F]*$' }
+        phone: { type: string, maxLength: 50, pattern: '^[^\x00-\x1F]*$' }
+        birthDate:
+          {
+            type: string,
+            format: date,
+            maxLength: 10,
+            pattern: '^\d{4}-\d{2}-\d{2}$',
+          }
+        countryOfResidence:
+          { type: string, maxLength: 100, pattern: '^[^\x00-\x1F]*$' }
+        avatarUrl:
+          { type: string, maxLength: 500, pattern: '^https?://[^\x00-\x1F]+$' }
+        favoriteCategories:
+          type: array
+          maxItems: 50
+          items: { type: string, maxLength: 50, pattern: '^[^\x00-\x1F]*$' }
+
+    ModerateUserRequest:
+      type: object
+      additionalProperties: false
+      required: [userId, block]
+      properties:
+        userId:
+          {
+            type: string,
+            format: uuid,
+            maxLength: 36,
+            pattern: "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+          }
+        block: { type: boolean }
+        reason: { type: string, maxLength: 500, pattern: '^[^\x00-\x1F]*$' }
+
+    ModerateUserResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        userId:
+          {
+            type: string,
+            format: uuid,
+            maxLength: 36,
+            pattern: "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+          }
+        isBlocked: { type: boolean }
+        blockedAt:
+          {
+            type: string,
+            format: date-time,
+            maxLength: 30,
+            pattern: '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z?$',
+          }
+        blockReason:
+          { type: string, maxLength: 500, pattern: '^[^\x00-\x1F]*$' }
+
+    # ---------- Country ----------
+    CountryResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          {
+            type: string,
+            format: uuid,
+            maxLength: 36,
+            pattern: "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+          }
+        name: { type: string, maxLength: 100, pattern: '^[^\x00-\x1F]*$' }
+        capital: { type: string, maxLength: 100, pattern: '^[^\x00-\x1F]*$' }
+        area: { type: number }
+        population: { type: integer, format: int64 }
+        currency:
+          { type: string, maxLength: 10, pattern: "^[A-Z]{3}$", example: "RUB" }
+        language: { type: string, maxLength: 100, pattern: '^[^\x00-\x1F]*$' }
+        phoneCode:
+          {
+            type: string,
+            maxLength: 10,
+            pattern: '^\+?\d{1,10}$',
+            example: "+71111111111",
+          }
+        imageUrl:
+          {
+            type: string,
+            maxLength: 500,
+            pattern: '^https?://[^\x00-\x1F]+$',
+            example: "https://example.com/image.jpg",
+          }
+
+    GetCountryResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          {
+            type: string,
+            format: uuid,
+            maxLength: 36,
+            pattern: "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+          }
+        name: { type: string, maxLength: 100, pattern: '^[^\x00-\x1F]*$' }
+        area: { type: number }
+        population: { type: integer, format: int64 }
+        gdp: { type: number }
+        currency:
+          { type: string, maxLength: 10, pattern: "^[A-Z]{3}$", example: "RUB" }
+        visaRequirements:
+          { type: string, maxLength: 2000, pattern: '^[^\x00-\x1F]*$' }
+        description:
+          { type: string, maxLength: 5000, pattern: '^[^\x00-\x1F]*$' }
+        safetyTips:
+          { type: string, maxLength: 2000, pattern: '^[^\x00-\x1F]*$' }
+        bestSeason: { type: string, maxLength: 100, pattern: '^[^\x00-\x1F]*$' }
+        language: { type: string, maxLength: 100, pattern: '^[^\x00-\x1F]*$' }
+        phoneCode:
+          {
+            type: string,
+            maxLength: 10,
+            pattern: '^\+?\d{1,10}$',
+            example: "+71111111111",
+          }
+        religion: { type: string, maxLength: 100, pattern: '^[^\x00-\x1F]*$' }
+        capitalId:
+          {
+            type: string,
+            format: uuid,
+            maxLength: 36,
+            pattern: "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+          }
+        capitalName:
+          { type: string, maxLength: 100, pattern: '^[^\x00-\x1F]*$' }
+        imageUrl:
+          {
+            type: string,
+            maxLength: 500,
+            pattern: '^https?://[^\x00-\x1F]+$',
+            example: "https://example.com/image.jpg",
+          }
+        holidays:
+          type: array
+          maxItems: 500
+          items: { $ref: "#/components/schemas/HolidayResponse" }
+
+    HolidayResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          {
+            type: string,
+            format: uuid,
+            maxLength: 36,
+            pattern: "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+          }
+        name: { type: string, maxLength: 200, pattern: '^[^\x00-\x1F]*$' }
+        date:
+          {
+            type: string,
+            format: date,
+            maxLength: 10,
+            pattern: '^\d{4}-\d{2}-\d{2}$',
+          }
+        description:
+          { type: string, maxLength: 2000, pattern: '^[^\x00-\x1F]*$' }
+        isNational: { type: boolean }
+
+    # ---------- City ----------
+    CityResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          {
+            type: string,
+            format: uuid,
+            maxLength: 36,
+            pattern: "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+          }
+        name: { type: string, maxLength: 100, pattern: '^[^\x00-\x1F]*$' }
+        population: { type: integer, format: int64 }
+        isCapital: { type: boolean }
+        coordinates: { $ref: "#/components/schemas/Coordinates" }
+        description:
+          { type: string, maxLength: 2000, pattern: '^[^\x00-\x1F]*$' }
+        timezone:
+          { type: string, maxLength: 50, pattern: '^[A-Za-z/_+\-0-9]+$' }
+        imageUrl:
+          {
+            type: string,
+            maxLength: 500,
+            pattern: '^https?://[^\x00-\x1F]+$',
+            example: "https://example.com/image.jpg",
+          }
+
+    GetCityResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          {
+            type: string,
+            format: uuid,
+            maxLength: 36,
+            pattern: "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+          }
+        name: { type: string, maxLength: 100, pattern: '^[^\x00-\x1F]*$' }
+        population: { type: integer, format: int64 }
+        isCapital: { type: boolean }
+        coordinates: { $ref: "#/components/schemas/Coordinates" }
+        description:
+          { type: string, maxLength: 2000, pattern: '^[^\x00-\x1F]*$' }
+        timezone:
+          { type: string, maxLength: 50, pattern: '^[A-Za-z/_+\-0-9]+$' }
+        travelTips:
+          { type: string, maxLength: 2000, pattern: '^[^\x00-\x1F]*$' }
+        countryId:
+          {
+            type: string,
+            format: uuid,
+            maxLength: 36,
+            pattern: "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+          }
+        imageId:
+          {
+            type: string,
+            format: uuid,
+            maxLength: 36,
+            pattern: "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+          }
+        imageUrl:
+          {
+            type: string,
+            maxLength: 500,
+            pattern: '^https?://[^\x00-\x1F]+$',
+            example: "https://example.com/image.jpg",
+          }
+
+    DistrictResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          {
+            type: string,
+            format: uuid,
+            maxLength: 36,
+            pattern: "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+          }
+        name: { type: string, maxLength: 100, pattern: '^[^\x00-\x1F]*$' }
+        description:
+          { type: string, maxLength: 2000, pattern: '^[^\x00-\x1F]*$' }
+        coordinates: { $ref: "#/components/schemas/Coordinates" }
+        cityId:
+          {
+            type: string,
+            format: uuid,
+            maxLength: 36,
+            pattern: "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+          }
+        imageId:
+          {
+            type: string,
+            format: uuid,
+            maxLength: 36,
+            pattern: "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+          }
+
+    TransportNodeResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          {
+            type: string,
+            format: uuid,
+            maxLength: 36,
+            pattern: "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+          }
+        name: { type: string, maxLength: 200, pattern: '^[^\x00-\x1F]*$' }
+        nodeType:
+          {
+            type: string,
+            enum: [airport, train_station, bus_station, port],
+            maxLength: 20,
+            pattern: "^[a-z_]+$",
+          }
+        coordinates: { $ref: "#/components/schemas/Coordinates" }
+        address: { type: string, maxLength: 500, pattern: '^[^\x00-\x1F]*$' }
+        cityId:
+          {
+            type: string,
+            format: uuid,
+            maxLength: 36,
+            pattern: "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+          }
+        imageId:
+          {
+            type: string,
+            format: uuid,
+            maxLength: 36,
+            pattern: "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+          }
+
+    UserResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          {
+            type: string,
+            format: uuid,
+            maxLength: 36,
+            pattern: "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+          }
+        username: { type: string, maxLength: 100, pattern: '^[^\x00-\x1F]*$' }
+        email:
+          {
+            type: string,
+            format: email,
+            maxLength: 255,
+            pattern: '^[^@\s]+@[^@\s]+\.[^@\s]+$',
+          }
+        isBlocked: { type: boolean }
+        registeredAt:
+          {
+            type: string,
+            format: date-time,
+            maxLength: 30,
+            pattern: '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z?$',
+          }
+
+    # ---------- Place ----------
+    PlaceResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          {
+            type: string,
+            format: uuid,
+            maxLength: 36,
+            pattern: "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+          }
+        name: { type: string, maxLength: 200, pattern: '^[^\x00-\x1F]*$' }
+        category: { type: string, maxLength: 100, pattern: '^[^\x00-\x1F]*$' }
+        description:
+          { type: string, maxLength: 5000, pattern: '^[^\x00-\x1F]*$' }
+        coordinates:
+          {
+            type: string,
+            maxLength: 50,
+            pattern: '^-?\d{1,3}(\.\d+)?,-?\d{1,3}(\.\d+)?$',
+          }
+        address: { type: string, maxLength: 500, pattern: '^[^\x00-\x1F]*$' }
+        openingHours:
+          { type: string, maxLength: 200, pattern: '^[^\x00-\x1F]*$' }
+        priceInfo: { type: string, maxLength: 200, pattern: '^[^\x00-\x1F]*$' }
+        avgVisitDurationMin: { type: integer }
+        avgRating: { type: number }
+        reviewsCount: { type: integer }
+        contactPhone: { type: string, maxLength: 50, pattern: '^\+?\d{1,15}$' }
+        website:
+          { type: string, maxLength: 500, pattern: '^https?://[^\x00-\x1F]+$' }
+        cityId:
+          {
+            type: string,
+            format: uuid,
+            maxLength: 36,
+            pattern: "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+          }
+        cityName: { type: string, maxLength: 100, pattern: '^[^\x00-\x1F]*$' }
+        districtId:
+          {
+            type: string,
+            format: uuid,
+            maxLength: 36,
+            pattern: "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+          }
+        districtName:
+          { type: string, maxLength: 100, pattern: '^[^\x00-\x1F]*$' }
+        imageUrl:
+          {
+            type: string,
+            maxLength: 500,
+            pattern: '^https?://[^\x00-\x1F]+$',
+            example: "https://example.com/image.jpg",
+          }
+        reviews:
+          type: array
+          maxItems: 500
+          items: { $ref: "#/components/schemas/ReviewBriefResponse" }
+
+    ReviewBriefResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          {
+            type: string,
+            format: uuid,
+            maxLength: 36,
+            pattern: "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+          }
+        rating: { type: integer, minimum: 1, maximum: 5 }
+        comment: { type: string, maxLength: 2000, pattern: '^[^\x00-\x1F]*$' }
+        visitDate:
+          {
+            type: string,
+            format: date,
+            maxLength: 10,
+            pattern: '^\d{4}-\d{2}-\d{2}$',
+          }
+        createdAt:
+          {
+            type: string,
+            format: date-time,
+            maxLength: 30,
+            pattern: '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z?$',
+          }
+        username: { type: string, maxLength: 100, pattern: '^[^\x00-\x1F]*$' }
+        isApproved: { type: boolean }
+
+    # ---------- Trip ----------
+    CreateTripRequest:
+      type: object
+      additionalProperties: false
+      required: [title, startDate, endDate]
+      properties:
+        title: { type: string, maxLength: 255, pattern: '^[^\x00-\x1F]*$' }
+        startDate:
+          {
+            type: string,
+            format: date,
+            maxLength: 10,
+            pattern: '^\d{4}-\d{2}-\d{2}$',
+          }
+        endDate:
+          {
+            type: string,
+            format: date,
+            maxLength: 10,
+            pattern: '^\d{4}-\d{2}-\d{2}$',
+          }
+        budget: { type: number, minimum: 0 }
+        notes: { type: string, maxLength: 2000, pattern: '^[^\x00-\x1F]*$' }
+
+    CreateTripResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          {
+            type: string,
+            format: uuid,
+            maxLength: 36,
+            pattern: "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+          }
+        title: { type: string, maxLength: 255, pattern: '^[^\x00-\x1F]*$' }
+        startDate:
+          {
+            type: string,
+            format: date,
+            maxLength: 10,
+            pattern: '^\d{4}-\d{2}-\d{2}$',
+          }
+        endDate:
+          {
+            type: string,
+            format: date,
+            maxLength: 10,
+            pattern: '^\d{4}-\d{2}-\d{2}$',
+          }
+        budget: { type: number }
+        status: { type: string, maxLength: 50, pattern: '^[^\x00-\x1F]*$' }
+
+    GetTripResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          {
+            type: string,
+            format: uuid,
+            maxLength: 36,
+            pattern: "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+          }
+        title: { type: string, maxLength: 255, pattern: '^[^\x00-\x1F]*$' }
+        startDate:
+          {
+            type: string,
+            format: date,
+            maxLength: 10,
+            pattern: '^\d{4}-\d{2}-\d{2}$',
+          }
+        endDate:
+          {
+            type: string,
+            format: date,
+            maxLength: 10,
+            pattern: '^\d{4}-\d{2}-\d{2}$',
+          }
+        budget: { type: number }
+        status: { type: string, maxLength: 50, pattern: '^[^\x00-\x1F]*$' }
+        notes: { type: string, maxLength: 2000, pattern: '^[^\x00-\x1F]*$' }
+        places:
+          type: array
+          maxItems: 200
+          items: { $ref: "#/components/schemas/TripPlaceResponse" }
+
+    TripPlaceResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        placeId:
+          {
+            type: string,
+            format: uuid,
+            maxLength: 36,
+            pattern: "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+          }
+        dayNumber: { type: integer }
+        arrivalTime:
+          {
+            type: string,
+            format: date-time,
+            maxLength: 30,
+            pattern: '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z?$',
+          }
+        durationMin: { type: integer }
+        notes: { type: string, maxLength: 1000, pattern: '^[^\x00-\x1F]*$' }
+        visitStatus: { type: string, maxLength: 50, pattern: '^[^\x00-\x1F]*$' }
+        actualCost: { type: number }
+
+    UserTripResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          {
+            type: string,
+            format: uuid,
+            maxLength: 36,
+            pattern: "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+          }
+        title: { type: string, maxLength: 255, pattern: '^[^\x00-\x1F]*$' }
+        startDate:
+          {
+            type: string,
+            format: date,
+            maxLength: 10,
+            pattern: '^\d{4}-\d{2}-\d{2}$',
+          }
+        endDate:
+          {
+            type: string,
+            format: date,
+            maxLength: 10,
+            pattern: '^\d{4}-\d{2}-\d{2}$',
+          }
+        status: { type: string, maxLength: 50, pattern: '^[^\x00-\x1F]*$' }
+
+    AddPlaceToTripRequest:
+      type: object
+      additionalProperties: false
+      required: [placeId, dayNumber]
+      properties:
+        placeId:
+          {
+            type: string,
+            format: uuid,
+            maxLength: 36,
+            pattern: "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+          }
+        dayNumber: { type: integer, minimum: 1 }
+        arrivalTime:
+          {
+            type: string,
+            format: date-time,
+            maxLength: 30,
+            pattern: '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z?$',
+          }
+        durationMin: { type: integer, minimum: 0 }
+        notes: { type: string, maxLength: 1000, pattern: '^[^\x00-\x1F]*$' }
+
+    UpdateTripRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        title: { type: string, maxLength: 255, pattern: '^[^\x00-\x1F]*$' }
+        startDate:
+          {
+            type: string,
+            format: date,
+            maxLength: 10,
+            pattern: '^\d{4}-\d{2}-\d{2}$',
+          }
+        endDate:
+          {
+            type: string,
+            format: date,
+            maxLength: 10,
+            pattern: '^\d{4}-\d{2}-\d{2}$',
+          }
+        budget: { type: number, minimum: 0 }
+        status: { type: string, maxLength: 50, pattern: '^[^\x00-\x1F]*$' }
+        notes: { type: string, maxLength: 2000, pattern: '^[^\x00-\x1F]*$' }
+
+    # ---------- Review ----------
+    CreateReviewRequest:
+      type: object
+      additionalProperties: false
+      required: [rating, comment, visitDate]
+      properties:
+        rating: { type: integer, minimum: 1, maximum: 5 }
+        comment: { type: string, maxLength: 2000, pattern: '^[^\x00-\x1F]*$' }
+        visitDate:
+          {
+            type: string,
+            format: date,
+            maxLength: 10,
+            pattern: '^\d{4}-\d{2}-\d{2}$',
+          }
+        imageUrl:
+          {
+            type: string,
+            maxLength: 500,
+            pattern: '^https?://[^\x00-\x1F]+$',
+            example: "https://example.com/image.jpg",
+          }
+
+    CreateReviewResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          {
+            type: string,
+            format: uuid,
+            maxLength: 36,
+            pattern: "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+          }
+        rating: { type: integer, minimum: 1, maximum: 5 }
+        comment: { type: string, maxLength: 2000, pattern: '^[^\x00-\x1F]*$' }
+        visitDate:
+          {
+            type: string,
+            format: date,
+            maxLength: 10,
+            pattern: '^\d{4}-\d{2}-\d{2}$',
+          }
+        createdAt:
+          {
+            type: string,
+            format: date-time,
+            maxLength: 30,
+            pattern: '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z?$',
+          }
+        isModerated: { type: boolean }
+        isApproved: { type: boolean }
+
+    ModerateReviewRequest:
+      type: object
+      additionalProperties: false
+      required: [reviewId, approved]
+      properties:
+        reviewId:
+          {
+            type: string,
+            format: uuid,
+            maxLength: 36,
+            pattern: "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+          }
+        approved: { type: boolean }
+        comment: { type: string, maxLength: 1000, pattern: '^[^\x00-\x1F]*$' }
+
+    ModerateReviewResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          {
+            type: string,
+            format: uuid,
+            maxLength: 36,
+            pattern: "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+          }
+        isApproved: { type: boolean }
+        isModerated: { type: boolean }
+        moderationComment:
+          { type: string, maxLength: 1000, pattern: '^[^\x00-\x1F]*$' }
+
+    UserReviewResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          {
+            type: string,
+            format: uuid,
+            maxLength: 36,
+            pattern: "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+          }
+        rating: { type: integer, minimum: 1, maximum: 5 }
+        comment: { type: string, maxLength: 2000, pattern: '^[^\x00-\x1F]*$' }
+        visitDate:
+          {
+            type: string,
+            format: date,
+            maxLength: 10,
+            pattern: '^\d{4}-\d{2}-\d{2}$',
+          }
+        createdAt:
+          {
+            type: string,
+            format: date-time,
+            maxLength: 30,
+            pattern: '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z?$',
+          }
+        placeId:
+          {
+            type: string,
+            format: uuid,
+            maxLength: 36,
+            pattern: "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+          }
+        placeName: { type: string, maxLength: 200, pattern: '^[^\x00-\x1F]*$' }
+        isApproved: { type: boolean }
+        isModerated: { type: boolean }
+
+    # ---------- Static Pages ----------
+    StaticPageResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          {
+            type: string,
+            format: uuid,
+            maxLength: 36,
+            pattern: "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+          }
+        slug: { type: string, maxLength: 100, pattern: "^[a-z0-9-]+$" }
+        title: { type: string, maxLength: 255, pattern: '^[^\x00-\x1F]*$' }
+        content: { type: string, maxLength: 10000, pattern: '^[^\x00-\x1F]*$' }
+        metaDescription:
+          { type: string, maxLength: 255, pattern: '^[^\x00-\x1F]*$' }
+        imageUrl:
+          {
+            type: string,
+            maxLength: 500,
+            pattern: '^https?://[^\x00-\x1F]+$',
+            example: "https://example.com/image.jpg",
+          }
+        imageAlt: { type: string, maxLength: 255, pattern: '^[^\x00-\x1F]*$' }
+        updatedAt:
+          {
+            type: string,
+            format: date-time,
+            maxLength: 30,
+            pattern: '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z?$',
+          }
+        publishedAt:
+          {
+            type: string,
+            format: date-time,
+            maxLength: 30,
+            pattern: '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z?$',
+          }
+        isPublished: { type: boolean }
+
+    # ---------- Favourites ----------
+    FavouriteRequest:
+      type: object
+      additionalProperties: false
+      required: [placeId]
+      properties:
+        placeId:
+          {
+            type: string,
+            format: uuid,
+            maxLength: 36,
+            pattern: "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+          }
+
+    # ---------- Analytics ----------
+    GenerateReportRequest:
+      type: object
+      additionalProperties: false
+      required: [reportType, format]
+      properties:
+        reportType:
+          {
+            type: string,
+            enum: [popular_places, user_activity, trip_statistics],
+            maxLength: 50,
+            pattern: "^[a-z_]+$",
+          }
+        format:
+          {
+            type: string,
+            enum: [json, csv],
+            maxLength: 10,
+            pattern: "^[a-z]+$",
+          }
+        limit: { type: integer, minimum: 1, maximum: 1000 }
+        dateFrom:
+          {
+            type: string,
+            format: date,
+            maxLength: 10,
+            pattern: '^\d{4}-\d{2}-\d{2}$',
+          }
+        dateTo:
+          {
+            type: string,
+            format: date,
+            maxLength: 10,
+            pattern: '^\d{4}-\d{2}-\d{2}$',
+          }
+
+  responses:
+    Unauthorized:
+      description: Unauthorized - Invalid or missing token
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Forbidden:
+      description: Forbidden - Insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+security:
+  - BearerAuth: []
+
+paths:
+  # ---------- Auth ----------
+  /api/v1/auth/register:
+    post:
+      summary: Register new user
+      description: Создаёт нового пользователя и отправляет код подтверждения на email или телефон.
+      operationId: registerUser
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RegisterUserRequest" }
+      responses:
+        "201":
+          description: User created, verification email sent
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RegisterUserResponse" }
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+
+  /api/v1/auth/verify:
+    post:
+      summary: Verify email or phone with code
+      description: Подтверждает email или телефон пользователя по одноразовому коду.
+      operationId: verifyContact
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/VerifyContactRequest" }
+      responses:
+        "200": { description: Verified successfully }
+        "400": { description: Invalid code }
+
+  /api/v1/auth/login:
+    post:
+      summary: Login with username/password
+      description: Аутентифицирует пользователя по логину и паролю; при включённой 2FA возвращает challengeId.
+      operationId: login
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/LoginUserRequest" }
+      responses:
+        "200":
+          description: Login response (may require 2FA)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/LoginUserResponse" }
+
+  /api/v1/auth/logout:
+    post:
+      summary: Logout (invalidate token)
+      description: Инвалидирует текущий JWT-токен пользователя.
+      operationId: logout
+      tags: [Auth]
+      security: [{ BearerAuth: [] }]
+      responses:
+        "204": { description: Successfully logged out }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /api/v1/auth/2fa/enable:
+    post:
+      summary: Enable TOTP 2FA for current user
+      description: Включает TOTP 2FA и возвращает backup-коды и otpauth URI.
+      operationId: enableTwoFactor
+      tags: [Auth]
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/EnableTwoFactorRequest" }
+      responses:
+        "200":
+          description: 2FA enabled, returns backup codes and otpauth URI
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnableTwoFactorResponse" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /api/v1/auth/2fa/verify:
+    post:
+      summary: Verify 2FA code during login
+      description: Проверяет код 2FA во время входа и выдаёт JWT.
+      operationId: verifyTwoFactor
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/VerifyTwoFactorRequest" }
+      responses:
+        "200":
+          description: Successful verification, returns JWT
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TwoFactorResponse" }
+
+  /api/v1/auth/profile:
+    get:
+      summary: Get current user profile
+      description: Возвращает профиль текущего аутентифицированного пользователя.
+      operationId: getUserProfile
+      tags: [Auth]
+      security: [{ BearerAuth: [] }]
+      responses:
+        "200":
+          description: User profile data
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/GetUserProfileResponse" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    patch:
+      summary: Partial update of user profile
+      description: Обновляет только переданные поля профиля, не затрагивая остальные.
+      operationId: updateUserProfile
+      tags: [Auth]
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/UpdateUserProfileRequest" }
+      responses:
+        "200":
+          description: Updated profile
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/GetUserProfileResponse" }
+        "400": { description: Validation error }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  # ---------- Countries ----------
+  /api/v1/countries:
+    get:
+      summary: List countries with pagination and search
+      description: Возвращает список стран с пагинацией и поиском по названию.
+      operationId: getCountries
+      tags: [Countries]
+      parameters:
+        - name: limit
+          in: query
+          schema: { type: integer, default: 20, minimum: 1, maximum: 100 }
+        - name: offset
+          in: query
+          schema: { type: integer, default: 0, minimum: 0 }
+        - name: search
+          in: query
+          schema: { type: string, maxLength: 100, pattern: '^[^\x00-\x1F]*$' }
+      responses:
+        "200":
+          description: List of countries
+          content:
+            application/json:
+              schema:
+                type: array
+                maxItems: 100
+                items: { $ref: "#/components/schemas/CountryResponse" }
+
+  /api/v1/countries/{id}:
+    get:
+      summary: Get detailed country information including holidays
+      description: Возвращает подробную информацию о стране, включая праздники.
+      operationId: getCountry
+      tags: [Countries]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            {
+              type: string,
+              format: uuid,
+              maxLength: 36,
+              pattern: "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+            }
+      responses:
+        "200":
+          description: Detailed country data
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/GetCountryResponse" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  # ---------- Cities ----------
+  /api/v1/countries/{countryId}/cities:
+    get:
+      summary: List cities by country
+      description: Возвращает список городов указанной страны с пагинацией.
+      operationId: getCitiesByCountry
+      tags: [Cities]
+      parameters:
+        - name: countryId
+          in: path
+          required: true
+          schema:
+            {
+              type: string,
+              format: uuid,
+              maxLength: 36,
+              pattern: "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+            }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 20, minimum: 1, maximum: 100 }
+        - name: offset
+          in: query
+          schema: { type: integer, default: 0, minimum: 0 }
+      responses:
+        "200":
+          description: List of cities
+          content:
+            application/json:
+              schema:
+                type: array
+                maxItems: 100
+                items: { $ref: "#/components/schemas/CityResponse" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/cities:
+    get:
+      summary: Search cities by name
+      description: Ищет города по подстроке в названии.
+      operationId: searchCities
+      tags: [Cities]
+      parameters:
+        - name: query
+          in: query
+          required: false
+          schema: { type: string, maxLength: 100, pattern: '^[^\x00-\x1F]*$' }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 20, minimum: 1, maximum: 100 }
+        - name: offset
+          in: query
+          schema: { type: integer, default: 0, minimum: 0 }
+      responses:
+        "200":
+          description: Matching cities
+          content:
+            application/json:
+              schema:
+                type: array
+                maxItems: 100
+                items: { $ref: "#/components/schemas/CityResponse" }
+
+  /api/v1/cities/{id}:
+    get:
+      summary: Get city by ID
+      description: Возвращает подробную информацию о городе по его идентификатору.
+      operationId: getCity
+      tags: [Cities]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            {
+              type: string,
+              format: uuid,
+              maxLength: 36,
+              pattern: "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+            }
+      responses:
+        "200":
+          description: City details
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/GetCityResponse" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/cities/{cityId}/districts:
+    get:
+      summary: Get districts of a city
+      description: Возвращает список районов указанного города.
+      operationId: getDistrictsByCity
+      tags: [Cities]
+      parameters:
+        - name: cityId
+          in: path
+          required: true
+          schema:
+            {
+              type: string,
+              format: uuid,
+              maxLength: 36,
+              pattern: "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+            }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 20, minimum: 1, maximum: 100 }
+        - name: offset
+          in: query
+          schema: { type: integer, default: 0, minimum: 0 }
+      responses:
+        "200":
+          description: List of districts
+          content:
+            application/json:
+              schema:
+                type: array
+                maxItems: 100
+                items: { $ref: "#/components/schemas/DistrictResponse" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/cities/{cityId}/transports:
+    get:
+      summary: Get transport nodes in a city
+      description: Возвращает список транспортных узлов (аэропорты, вокзалы и т.п.) в городе.
+      operationId: getTransportNodesByCity
+      tags: [Cities]
+      parameters:
+        - name: cityId
+          in: path
+          required: true
+          schema:
+            {
+              type: string,
+              format: uuid,
+              maxLength: 36,
+              pattern: "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+            }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 20, minimum: 1, maximum: 100 }
+        - name: offset
+          in: query
+          schema: { type: integer, default: 0, minimum: 0 }
+      responses:
+        "200":
+          description: List of transport nodes
+          content:
+            application/json:
+              schema:
+                type: array
+                maxItems: 100
+                items: { $ref: "#/components/schemas/TransportNodeResponse" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  # ---------- Places ----------
+  /api/v1/places:
+    get:
+      summary: List places (optionally filtered by city and/or category)
+      description: |
+        Возвращает список мест. Можно фильтровать по городу (`cityId`) и/или категории (`category`).
+        Если передан `cityId` — фильтр по городу с опциональной категорией и сортировкой.
+        Если передан только `category` — глобальный поиск по категории.
+      operationId: getPlaces
+      tags: [Places]
+      parameters:
+        - name: cityId
+          in: query
+          schema:
+            {
+              type: string,
+              format: uuid,
+              maxLength: 36,
+              pattern: "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+            }
+        - name: category
+          in: query
+          schema: { type: string, maxLength: 100, pattern: '^[^\x00-\x1F]*$' }
+        - name: sortBy
+          in: query
+          schema:
+            {
+              type: string,
+              enum: [rating, name, visits],
+              maxLength: 20,
+              pattern: "^[a-z]+$",
+            }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 20, minimum: 1, maximum: 100 }
+        - name: offset
+          in: query
+          schema: { type: integer, default: 0, minimum: 0 }
+      responses:
+        "200":
+          description: List of places
+          content:
+            application/json:
+              schema:
+                type: array
+                maxItems: 100
+                items: { $ref: "#/components/schemas/PlaceResponse" }
+        "400":
+          description: Neither cityId nor category provided
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/places/{id}:
+    get:
+      summary: Get detailed place information with reviews
+      description: Возвращает подробную информацию о месте вместе с отзывами.
+      operationId: getPlace
+      tags: [Places]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            {
+              type: string,
+              format: uuid,
+              maxLength: 36,
+              pattern: "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+            }
+      responses:
+        "200":
+          description: Place details
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PlaceResponse" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  # ---------- Trips ----------
+  /api/v1/trips:
+    post:
+      summary: Create a new trip
+      description: Создаёт новую поездку для текущего пользователя.
+      operationId: createTrip
+      tags: [Trips]
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateTripRequest" }
+      responses:
+        "201":
+          description: Trip created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CreateTripResponse" }
+        "400": { description: Validation error }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    get:
+      summary: Get current user's trips
+      description: Возвращает список поездок текущего пользователя.
+      operationId: getUserTrips
+      tags: [Trips]
+      security: [{ BearerAuth: [] }]
+      responses:
+        "200":
+          description: List of user trips
+          content:
+            application/json:
+              schema:
+                type: array
+                maxItems: 200
+                items: { $ref: "#/components/schemas/UserTripResponse" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /api/v1/trips/{tripId}:
+    get:
+      summary: Get trip by ID
+      description: Возвращает подробную информацию о поездке по её идентификатору.
+      operationId: getTrip
+      tags: [Trips]
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: tripId
+          in: path
+          required: true
+          schema:
+            {
+              type: string,
+              format: uuid,
+              maxLength: 36,
+              pattern: "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+            }
+      responses:
+        "200":
+          description: Trip details
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/GetTripResponse" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      summary: Partial update of a trip
+      description: Обновляет только переданные поля поездки (например, статус или бюджет).
+      operationId: updateTrip
+      tags: [Trips]
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: tripId
+          in: path
+          required: true
+          schema:
+            {
+              type: string,
+              format: uuid,
+              maxLength: 36,
+              pattern: "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+            }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/UpdateTripRequest" }
+      responses:
+        "200":
+          description: Updated trip
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/GetTripResponse" }
+        "400": { description: Validation error }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      summary: Delete trip
+      description: Удаляет поездку текущего пользователя по её идентификатору.
+      operationId: deleteTrip
+      tags: [Trips]
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: tripId
+          in: path
+          required: true
+          schema:
+            {
+              type: string,
+              format: uuid,
+              maxLength: 36,
+              pattern: "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+            }
+      responses:
+        "204": { description: Deleted successfully }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/trips/{tripId}/places:
+    post:
+      summary: Add a place to trip
+      description: Добавляет место в поездку с указанием дня и времени посещения.
+      operationId: addPlaceToTrip
+      tags: [Trips]
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: tripId
+          in: path
+          required: true
+          schema:
+            {
+              type: string,
+              format: uuid,
+              maxLength: 36,
+              pattern: "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+            }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AddPlaceToTripRequest" }
+      responses:
+        "201": { description: Place added to trip }
+        "400": { description: Validation error or time conflict }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      summary: Remove a place from trip
+      description: Удаляет место из поездки.
+      operationId: removePlaceFromTrip
+      tags: [Trips]
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: tripId
+          in: path
+          required: true
+          schema:
+            {
+              type: string,
+              format: uuid,
+              maxLength: 36,
+              pattern: "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+            }
+        - name: placeId
+          in: query
+          required: true
+          schema:
+            {
+              type: string,
+              format: uuid,
+              maxLength: 36,
+              pattern: "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+            }
+      responses:
+        "204": { description: Removed successfully }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  # ---------- Content ----------
+  /api/v1/holidays:
+    get:
+      summary: Get holidays by date
+      description: Возвращает список праздников, приходящихся на указанную дату.
+      operationId: getHolidaysByDate
+      tags: [Content]
+      parameters:
+        - name: date
+          in: query
+          required: true
+          schema:
+            {
+              type: string,
+              format: date,
+              maxLength: 10,
+              pattern: '^\d{4}-\d{2}-\d{2}$',
+            }
+      responses:
+        "200":
+          description: List of holidays
+          content:
+            application/json:
+              schema:
+                type: array
+                maxItems: 500
+                items: { $ref: "#/components/schemas/HolidayResponse" }
+
+  /api/v1/files/{id}:
+    get:
+      summary: Get static page by ID (any status)
+      description: Возвращает статическую страницу по её идентификатору в любом статусе.
+      operationId: getStaticPage
+      tags: [Content]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            {
+              type: string,
+              format: uuid,
+              maxLength: 36,
+              pattern: "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+            }
+      responses:
+        "200":
+          description: Static page content
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/StaticPageResponse" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  # ---------- Reviews ----------
+  /api/v1/places/{placeId}/reviews:
+    post:
+      summary: Create a review for a place
+      description: Создаёт отзыв о месте; отзыв попадает на модерацию.
+      operationId: createReview
+      tags: [Reviews]
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: placeId
+          in: path
+          required: true
+          schema:
+            {
+              type: string,
+              format: uuid,
+              maxLength: 36,
+              pattern: "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+            }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateReviewRequest" }
+      responses:
+        "201":
+          description: Review created (pending moderation)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CreateReviewResponse" }
+        "400": { description: Validation error }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    get:
+      summary: Get reviews for a place
+      description: Возвращает отзывы о месте; при необходимости только одобренные.
+      operationId: getReviewsByPlace
+      tags: [Reviews]
+      parameters:
+        - name: placeId
+          in: path
+          required: true
+          schema:
+            {
+              type: string,
+              format: uuid,
+              maxLength: 36,
+              pattern: "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+            }
+        - name: onlyApproved
+          in: query
+          schema: { type: boolean, default: true }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 20, minimum: 1, maximum: 100 }
+        - name: offset
+          in: query
+          schema: { type: integer, default: 0, minimum: 0 }
+      responses:
+        "200":
+          description: List of reviews
+          content:
+            application/json:
+              schema:
+                type: array
+                maxItems: 100
+                items: { $ref: "#/components/schemas/ReviewBriefResponse" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/users/me/reviews:
+    get:
+      summary: Get current user's reviews
+      description: Возвращает список отзывов текущего пользователя.
+      operationId: getUserReviews
+      tags: [Reviews]
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: limit
+          in: query
+          schema: { type: integer, default: 20, minimum: 1, maximum: 100 }
+        - name: offset
+          in: query
+          schema: { type: integer, default: 0, minimum: 0 }
+      responses:
+        "200":
+          description: User's reviews
+          content:
+            application/json:
+              schema:
+                type: array
+                maxItems: 100
+                items: { $ref: "#/components/schemas/UserReviewResponse" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /api/v1/reviews/{reviewId}:
+    delete:
+      summary: Delete a review (owner or moderator)
+      description: Удаляет отзыв; доступно владельцу или модератору.
+      operationId: deleteReview
+      tags: [Reviews]
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: reviewId
+          in: path
+          required: true
+          schema:
+            {
+              type: string,
+              format: uuid,
+              maxLength: 36,
+              pattern: "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+            }
+      responses:
+        "204": { description: Review deleted }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  # ---------- Moderation ----------
+  /api/v1/moderation/users:
+    get:
+      operationId: getUsers
+      summary: Get list of users (moderator only)
+      description: Возвращает список пользователей с пагинацией и поиском; доступно модераторам.
+      tags: [Admin]
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: limit
+          in: query
+          schema: { type: integer, default: 20, minimum: 1, maximum: 100 }
+        - name: offset
+          in: query
+          schema: { type: integer, default: 0, minimum: 0 }
+        - name: search
+          in: query
+          schema: { type: string, maxLength: 100, pattern: '^[^\x00-\x1F]*$' }
+      responses:
+        "200":
+          description: List of users
+          content:
+            application/json:
+              schema:
+                type: array
+                maxItems: 100
+                items: { $ref: "#/components/schemas/UserResponse" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      operationId: moderateUser
+      summary: Block/unblock user (moderator only)
+      description: |
+        Блокирует или разблокирует пользователя; доступно только модераторам.
+        Идентификатор пользователя передаётся в теле запроса (`ModerateUserRequest.userId`).
+      tags: [Admin]
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ModerateUserRequest" }
+      responses:
+        "200":
+          description: User moderation result
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ModerateUserResponse" }
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/moderation/reviews:
+    get:
+      operationId: getPendingReviews
+      summary: Get reviews for moderation (moderator/analyst)
+      description: |
+        Возвращает отзывы для модерации. Фильтр `isApproved`:
+        `false` — ожидающие модерации (по умолчанию), `true` — уже одобренные.
+      tags: [Admin]
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: isApproved
+          in: query
+          schema: { type: boolean, default: false }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 20, minimum: 1, maximum: 100 }
+        - name: offset
+          in: query
+          schema: { type: integer, default: 0, minimum: 0 }
+      responses:
+        "200":
+          description: List of reviews pending moderation
+          content:
+            application/json:
+              schema:
+                type: array
+                maxItems: 100
+                items: { $ref: "#/components/schemas/ReviewBriefResponse" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      summary: Moderate a review (moderators only)
+      description: Одобряет или отклоняет отзыв; идентификатор отзыва передаётся в теле запроса.
+      operationId: moderateReview
+      tags: [Admin]
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ModerateReviewRequest" }
+      responses:
+        "200":
+          description: Moderation result
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ModerateReviewResponse" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  # ---------- Analytics & SSE ----------
+  /api/v1/analytics/reports:
+    post:
+      summary: Request analytics report generation (Async)
+      description: Запускает асинхронную генерацию аналитического отчёта и возвращает Location для стриминга статуса.
+      operationId: generateReport
+      tags: [Analytics]
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/GenerateReportRequest" }
+      responses:
+        "202":
+          description: Report generation started
+          headers:
+            Location:
+              description: URL to check status or stream results
+              schema:
+                type: string
+                maxLength: 500
+                pattern: '^/[^\x00-\x1F]+$'
+                example: "/api/v1/analytics/reports/123e4567-e89b-12d3-a456-426614174000/stream"
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/v1/analytics/reports/{reportId}/stream:
+    get:
+      summary: Stream report generation status and result (SSE)
+      description: |
+        Server-Sent Events (SSE) endpoint for asynchronous report generation.
+        Returns a stream of events: `data: {"status": "processing", "progress": 50}` 
+        followed by `data: {"status": "completed", "url": "/reports/123.csv"}`.
+      operationId: streamReportStatus
+      tags: [Analytics]
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: reportId
+          in: path
+          required: true
+          schema:
+            {
+              type: string,
+              format: uuid,
+              maxLength: 36,
+              pattern: "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+            }
+      responses:
+        "200":
+          description: Server-Sent Events stream
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                description: "data: {\"status\": \"completed\", \"url\": \"...\"}\n\n"
+                maxLength: 10000
+                pattern: '^[^\x00-\x08\x0B\x0C\x0E-\x1F]*$'
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  # ---------- Favourites ----------
+  /api/v1/favourites:
+    get:
+      summary: Get user's favourite places
+      description: Возвращает список избранных мест текущего пользователя.
+      operationId: getFavourites
+      tags: [Favourites]
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: limit
+          in: query
+          schema: { type: integer, default: 20, minimum: 1, maximum: 100 }
+        - name: offset
+          in: query
+          schema: { type: integer, default: 0, minimum: 0 }
+      responses:
+        "200":
+          description: List of favourite places
+          content:
+            application/json:
+              schema:
+                type: array
+                maxItems: 100
+                items: { $ref: "#/components/schemas/PlaceResponse" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      summary: Add a place to favourites
+      description: Добавляет место в список избранного текущего пользователя.
+      operationId: addFavourite
+      tags: [Favourites]
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/FavouriteRequest" }
+      responses:
+        "201": { description: Added }
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      summary: Remove a place from favourites
+      description: Удаляет место из списка избранного текущего пользователя. `placeId` передаётся в теле.
+      operationId: removeFavourite
+      tags: [Favourites]
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/FavouriteRequest" }
+      responses:
+        "204": { description: Removed }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }

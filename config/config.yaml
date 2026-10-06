@@ -1,0 +1,63 @@
+app:
+  name: "GeoGuide CLI"
+  version: "1.0.0"
+
+database:
+  primary_type: "postgres"
+  cache_type: "redis"
+  # primary_type: "postgres"
+  # cache_type: "redis"
+
+  postgres:
+    host: "localhost"
+    port: 5433
+    user: "app_user"
+    password: "your_secure_password"
+    dbname: "dev"
+    sslmode: "disable"
+
+  cassandra:
+    hosts: ["localhost:9042"]
+    keyspace: "geoguide"
+    consistency: "quorum"
+    username: "cassandra"
+    password: "cassandra"
+
+  redis:
+    host: "localhost"
+    port: 6379
+    password: ""
+    db: 0
+
+  tarantool:
+    hosts: ["localhost:3301"]
+    username: "guest"
+    password: ""
+    space: "sessions"
+
+  minio:
+    endpoint: "localhost:8333"
+    access_key: "any"
+    secret_key: "any"
+    bucket: "static"
+    use_ssl: false
+
+  auth:
+    jwt_secret: "your-secret-key"
+
+smtp:
+  host: "smtp.gmail.com"
+  port: 587
+  from: "andrey.fed314@gmail.com"
+  password: "plwi qidr jbxg onvc"
+  template_dir: "templates/email"
+
+logging:
+  level: "info"
+  file: "logs/app.log"
+  max_size_mb: 10
+  max_backups: 5
+  max_age_days: 30
+
+cli:
+  interactive: true

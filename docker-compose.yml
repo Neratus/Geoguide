@@ -1,0 +1,78 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: app_user
+      POSTGRES_PASSWORD: your_secure_password
+      POSTGRES_DB: dev
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U app_user -d dev" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    profiles: [ "postgres", "all" ]
+
+  cassandra:
+    image: cassandra:4.1
+    ports:
+      - "9042:9042"
+    environment:
+      CASSANDRA_CLUSTER_NAME: "GeoGuideCluster"
+      CASSANDRA_DC: "datacenter1"
+    volumes:
+      - cassandra_data:/var/lib/cassandra
+      - ./migrations_cassandra:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: [ "CMD", "cqlsh", "-e", "describe keyspaces" ]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+    profiles: [ "cassandra", "all" ]
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    profiles: [ "redis", "all" ]
+
+  tarantool:
+    image: tarantool/tarantool:latest
+    ports:
+      - "3301:3301"
+    environment:
+      TARANTOOL_USER_NAME: "app_user"
+      TARANTOOL_USER_PASSWORD: "your_secure_password"
+    healthcheck:
+      test: [ "CMD", "tarantool", "-e", "require('console').connect('localhost:3301'):eval('return true')" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    profiles: [ "tarantool", "all" ]
+
+  mailhog:
+    image: mailhog/mailhog
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    profiles: [ "always" ]
+
+  seaweedfs:
+    image: chrislusf/seaweedfs:4.47
+    command: server -s3 -s3.port=8333 -s3.config=/etc/seaweedfs/s3.json -master.volumeSizeLimitMB=100
+    volumes:
+      - ./seaweedfs/s3.json:/etc/seaweedfs/s3.json:ro
+      - seaweedfs_data:/data
+    ports:
+      - "8333:8333"
+      - "9333:9333"
+
+volumes:
+  cassandra_data:
+  seaweedfs_data:

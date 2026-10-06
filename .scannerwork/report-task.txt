@@ -1,0 +1,6 @@
+projectKey=Neratus_geoguide
+serverUrl=http://localhost:9100
+serverVersion=26.9.0.129388
+dashboardUrl=http://localhost:9100/dashboard?id=Neratus_geoguide
+ceTaskId=0dc7cc34-bc93-42ab-b775-6ebc6fb34bc5
+ceTaskUrl=http://localhost:9100/api/ce/task?id=0dc7cc34-bc93-42ab-b775-6ebc6fb34bc5

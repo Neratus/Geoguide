@@ -1,0 +1,42 @@
+app:
+  name: "geoguide"
+  version: "1.0.0-e2e"
+
+database:
+  primary_type: "postgres"
+  cache_type: "redis"
+
+  postgres:
+    host: "{{.Host}}"
+    port: {{.Port}}
+    user: "{{.User}}"
+    password: "{{.Password}}"
+    dbname: "{{.Database}}"
+    sslmode: "disable"
+
+  redis:
+    host: "{{.RedisHost}}"
+    port: {{.RedisPort}}
+    password: ""
+    db: 0
+
+  auth:
+    jwt_secret: "e2e-test-secret-key-12345"
+
+  minio:
+    endpoint: "{{.Endpoint}}"
+    access_key: "test"
+    secret_key: "test"
+    bucket: "geoguide"
+    use_ssl: false
+
+logging:
+  level: "info"
+  file: "logs/e2e.log"
+
+smtp:
+  host: "localhost"
+  port: 1025
+  from: "noreply@geoguide.test"
+  password: ""
+  template_dir: "templates/email"

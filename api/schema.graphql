@@ -1,0 +1,462 @@
+# ============================================================
+# GeoGuide GraphQL API
+# ============================================================
+# Эндпоинт:      POST https://localhost:8080/api/v2/graphql
+# Playground:    GET  https://localhost:8080/api/v2/graphql
+# Subscriptions: WS   wss://localhost:8080/api/v2/graphql
+# Авторизация:   Authorization: Bearer <JWT>
+# ============================================================
+
+scalar DateTime
+scalar Date
+scalar UUID
+scalar Email
+scalar URL
+scalar Long
+scalar JSON
+
+enum UserRole {
+  USER
+  MODERATOR
+  ANALYST
+}
+
+enum NodeType {
+  AIRPORT
+  TRAIN_STATION
+  BUS_STATION
+  PORT
+}
+
+enum ReportType {
+  POPULAR_PLACES
+  USER_ACTIVITY
+  TRIP_STATISTICS
+}
+
+enum ReportFormat {
+  JSON
+  CSV
+}
+
+enum PlaceSortBy {
+  RATING
+  NAME
+  VISITS
+}
+
+enum ReportStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+type Coordinates {
+  lat: Float!
+  lng: Float!
+}
+
+type PageInfo {
+  limit: Int!
+  offset: Int!
+  total: Int!
+  hasNextPage: Boolean!
+}
+
+type Error {
+  message: String!
+  code: String
+  field: String
+}
+
+type OperationResult {
+  success: Boolean!
+  error: Error
+}
+
+type User {
+  id: UUID!
+  username: String!
+  email: Email!
+  phone: String
+  registeredAt: DateTime!
+  birthDate: Date
+  countryOfResidence: String
+  avatarUrl: URL
+  favoriteCategories: [String!]!
+  isBlocked: Boolean!
+  role: UserRole!
+}
+
+type LoginPayload {
+  user: User
+  token: String
+  requiresTwoFactor: Boolean!
+  challengeId: String
+}
+
+type TwoFactorSetup {
+  backupCodes: [String!]!
+  otpauthUri: String!
+}
+
+type AuthToken {
+  token: String!
+}
+
+type Country {
+  id: UUID!
+  name: String!
+  capital: String
+  area: Float
+  population: Long
+  currency: String
+  language: String
+  phoneCode: String
+  imageUrl: URL
+}
+
+type CountryDetails {
+  id: UUID!
+  name: String!
+  area: Float
+  population: Long
+  gdp: Float
+  currency: String
+  visaRequirements: String
+  description: String
+  safetyTips: String
+  bestSeason: String
+  language: String
+  phoneCode: String
+  religion: String
+  capitalId: UUID
+  capitalName: String
+  imageUrl: URL
+  holidays: [Holiday!]!
+}
+
+type Holiday {
+  id: UUID!
+  name: String!
+  date: Date!
+  description: String
+  isNational: Boolean!
+}
+
+type City {
+  id: UUID!
+  name: String!
+  population: Long
+  isCapital: Boolean!
+  coordinates: Coordinates!
+  description: String
+  timezone: String
+  imageUrl: URL
+}
+
+type CityDetails {
+  id: UUID!
+  name: String!
+  population: Long
+  isCapital: Boolean!
+  coordinates: Coordinates!
+  description: String
+  timezone: String
+  travelTips: String
+  countryId: UUID!
+  imageId: UUID
+  imageUrl: URL
+}
+
+type District {
+  id: UUID!
+  name: String!
+  description: String
+  coordinates: Coordinates!
+  cityId: UUID!
+  imageId: UUID
+}
+
+type TransportNode {
+  id: UUID!
+  name: String!
+  nodeType: NodeType!
+  coordinates: Coordinates!
+  address: String
+  cityId: UUID!
+  imageId: UUID
+}
+
+type Place {
+  id: UUID!
+  name: String!
+  category: String!
+  description: String
+  coordinates: String
+  address: String
+  openingHours: String
+  priceInfo: String
+  avgVisitDurationMin: Int
+  avgRating: Float
+  reviewsCount: Int!
+  contactPhone: String
+  website: URL
+  cityId: UUID!
+  cityName: String
+  districtId: UUID
+  districtName: String
+  imageUrl: URL
+  reviews(onlyApproved: Boolean = true, limit: Int = 20, offset: Int = 0): [ReviewBrief!]!
+}
+
+type ReviewBrief {
+  id: UUID!
+  rating: Int!
+  comment: String!
+  visitDate: Date!
+  createdAt: DateTime!
+  username: String!
+  isApproved: Boolean!
+}
+
+type Review {
+  id: UUID!
+  rating: Int!
+  comment: String!
+  visitDate: Date!
+  createdAt: DateTime!
+  placeId: UUID!
+  placeName: String
+  isApproved: Boolean!
+  isModerated: Boolean!
+}
+
+type Trip {
+  id: UUID!
+  title: String!
+  startDate: Date!
+  endDate: Date!
+  budget: Float
+  status: String
+  notes: String
+  places: [TripPlace!]!
+}
+
+type TripSummary {
+  id: UUID!
+  title: String!
+  startDate: Date!
+  endDate: Date!
+  status: String
+}
+
+type TripPlace {
+  placeId: UUID!
+  dayNumber: Int!
+  arrivalTime: DateTime
+  durationMin: Int
+  notes: String
+  visitStatus: String
+  actualCost: Float
+}
+
+type StaticPage {
+  id: UUID!
+  slug: String!
+  title: String!
+  content: String!
+  metaDescription: String
+  imageUrl: URL
+  imageAlt: String
+  updatedAt: DateTime!
+  publishedAt: DateTime
+  isPublished: Boolean!
+}
+
+type Report {
+  id: UUID!
+  reportType: ReportType!
+  format: ReportFormat!
+  status: ReportStatus!
+  progress: Int!
+  url: URL
+  createdAt: DateTime!
+  completedAt: DateTime
+}
+
+input RegisterUserInput {
+  username: String!
+  email: Email!
+  password: String!
+  phone: String
+  birthDate: Date
+  countryOfResidence: String
+}
+
+input VerifyContactInput {
+  userId: UUID!
+  contact: String!
+  code: String!
+}
+
+input LoginInput {
+  username: String!
+  password: String!
+}
+
+input EnableTwoFactorInput {
+  userId: UUID!
+  secret: String!
+  code: String!
+}
+
+input VerifyTwoFactorInput {
+  challengeId: String!
+  code: String!
+}
+
+input UpdateUserProfileInput {
+  username: String
+  phone: String
+  birthDate: Date
+  countryOfResidence: String
+  avatarUrl: URL
+  favoriteCategories: [String!]
+}
+
+input ModerateUserInput {
+  userId: UUID!
+  block: Boolean!
+  reason: String
+}
+
+input CreateTripInput {
+  title: String!
+  startDate: Date!
+  endDate: Date!
+  budget: Float
+  notes: String
+}
+
+input UpdateTripInput {
+  title: String
+  startDate: Date
+  endDate: Date
+  budget: Float
+  status: String
+  notes: String
+}
+
+input AddPlaceToTripInput {
+  placeId: UUID!
+  dayNumber: Int!
+  arrivalTime: DateTime
+  durationMin: Int
+  notes: String
+}
+
+input CreateReviewInput {
+  placeId: UUID!
+  rating: Int!
+  comment: String!
+  visitDate: Date!
+  imageUrl: URL
+}
+
+input ModerateReviewInput {
+  reviewId: UUID!
+  approved: Boolean!
+  comment: String
+}
+
+input GenerateReportInput {
+  reportType: ReportType!
+  format: ReportFormat!
+  limit: Int
+  dateFrom: Date
+  dateTo: Date
+}
+
+input PaginationInput {
+  limit: Int = 20
+  offset: Int = 0
+}
+
+type Query {
+  me: User!
+
+  countries(search: String, pagination: PaginationInput): [Country!]!
+  country(id: UUID!): CountryDetails
+
+  citiesByCountry(countryId: UUID!, pagination: PaginationInput): [City!]!
+  city(id: UUID!): CityDetails
+  cities(search: String, pagination: PaginationInput): [City!]!
+  districtsByCity(cityId: UUID!, pagination: PaginationInput): [District!]!
+  transportsByCity(cityId: UUID!, pagination: PaginationInput): [TransportNode!]!
+
+  placesByCity(
+    cityId: UUID!
+    category: String
+    sortBy: PlaceSortBy
+    pagination: PaginationInput
+  ): [Place!]!
+  placesByCategory(category: String!, pagination: PaginationInput): [Place!]!
+  place(id: UUID!): Place
+
+  myTrips: [TripSummary!]!
+  trip(id: UUID!): Trip
+
+  holidaysByDate(date: Date!): [Holiday!]!
+  file(id: UUID!): StaticPage
+
+  reviewsByPlace(
+    placeId: UUID!
+    onlyApproved: Boolean = true
+    pagination: PaginationInput
+  ): [ReviewBrief!]!
+  myReviews(pagination: PaginationInput): [Review!]!
+
+  moderationUsers(search: String, pagination: PaginationInput): [User!]!
+  moderationPendingReviews(
+    isApproved: Boolean = true
+    pagination: PaginationInput
+  ): [ReviewBrief!]!
+
+  favourites(pagination: PaginationInput): [Place!]!
+
+  report(id: UUID!): Report
+}
+
+type Mutation {
+  registerUser(input: RegisterUserInput!): User!
+  verifyContact(input: VerifyContactInput!): OperationResult!
+  login(input: LoginInput!): LoginPayload!
+  logout: OperationResult!
+  enableTwoFactor(input: EnableTwoFactorInput!): TwoFactorSetup!
+  verifyTwoFactor(input: VerifyTwoFactorInput!): AuthToken!
+
+  updateUserProfile(input: UpdateUserProfileInput!): User!
+
+  moderateUser(input: ModerateUserInput!): User!
+  moderateReview(input: ModerateReviewInput!): Review!
+
+  createTrip(input: CreateTripInput!): Trip!
+  updateTrip(id: UUID!, input: UpdateTripInput!): Trip!
+  deleteTrip(id: UUID!): OperationResult!
+  addPlaceToTrip(tripId: UUID!, input: AddPlaceToTripInput!): TripPlace!
+  removePlaceFromTrip(tripId: UUID!, placeId: UUID!): OperationResult!
+
+  createReview(input: CreateReviewInput!): Review!
+  deleteReview(id: UUID!): OperationResult!
+
+  addFavourite(placeId: UUID!): OperationResult!
+  removeFavourite(placeId: UUID!): OperationResult!
+
+  generateReport(input: GenerateReportInput!): Report!
+}
+
+type Subscription {
+  reportStatus(reportId: UUID!): Report!
+}

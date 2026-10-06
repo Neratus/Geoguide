@@ -31,3 +31,16 @@ go.work.sum
 # Editor/IDE
 # .idea/
 # .vscode/
+
+.DS_Store
+allure-report 
+allure-results 
+coverage*
+coverage-dashboard.html
+junit-report.xml
+main
+test_res.txt
+tree.txt
+logs
+build
+test.txt
