@@ -10,7 +10,7 @@ COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
 
-RUN CGO_ENABLED=1 GOOS=linux GOARCH=amd64 \
+RUN CGO_ENABLED=1 GOOS=linux \
     go build -trimpath -ldflags="-s -w" -o /out/geoguide_api ./cmd/api
 
 # ---------- runtime ----------
@@ -22,6 +22,8 @@ WORKDIR /app
 
 COPY --from=builder /out/geoguide_api ./geoguide_api
 COPY config ./config
+COPY migrations ./migrations
+
 
 EXPOSE 8080
 
