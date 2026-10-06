@@ -2,14 +2,25 @@ name: GeoGuide Test Pipeline
 
 on:
   push:
-    branches: [main, master, develop]
+    branches: [main, master, develop, maib]
   pull_request:
-    branches: [main, master, develop]
+    branches: [main, master, develop, maib]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   test-and-report:
-    name: Run Integration & E2E Tests
+    name: Unit -> Integration -> E2E
     runs-on: ubuntu-latest
+    timeout-minutes: 45
 
     steps:
       - name: Checkout code
@@ -18,48 +29,124 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build Application Image
-        run: |
-          echo "Building GeoGuide API image..."
-          docker build -t geoguide-app:ci -f Dockerfile .
-          echo " App image built successfully"
-
-      - name: Run Test Docker Environment (App + Postgres + Tester)
-        run: |
-          echo "Starting docker-compose.ci.yml..."
-          echo "This will start: 1) Postgres, 2) GeoGuide App, 3) E2E Tester"
-          make test-ci
-        continue-on-error: false
-
-      - name: Cache Allure History
+      - name: Cache Go modules
         uses: actions/cache@v4
         with:
-          path: ./allure-results/history
-          key: allure-history-${{ github.run_id }}
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Prepare output dirs
+        run: |
+          mkdir -p allure-results allure-history coverage
+          ls -la
+
+      # ---------- RESTORE ALLURE HISTORY (for trends) ----------
+      - name: Restore Allure history cache
+        if: always()
+        uses: actions/cache@v4
+        with:
+          path: allure-history/history
+          key: allure-history-${{ github.ref }}-${{ github.run_number }}
+          restore-keys: |
+            allure-history-${{ github.ref }}-
             allure-history-
 
-      - name: Upload Allure Results
-        uses: actions/upload-artifact@v4
+      # ---------- RUN TESTS (UNIT -> INTEGRATION -> E2E) ----------
+      - name: Run tests (docker-compose.ci.yml)
+        id: tests
+        continue-on-error: true
+        run: make test-ci
+
+      # ---------- INSTALL ALLURE CLI ON RUNNER ----------
+      - name: Install Allure CLI
         if: always()
+        run: |
+          ALLURE_VERSION=2.32.0
+          curl -sSL -o /tmp/allure.tgz "https://github.com/allure-framework/allure2/releases/download/${ALLURE_VERSION}/allure-${ALLURE_VERSION}.tgz"
+          sudo tar -zxf /tmp/allure.tgz -C /opt
+          sudo ln -sf /opt/allure-${ALLURE_VERSION}/bin/allure /usr/local/bin/allure
+          allure --version
+
+      # ---------- MERGE OLD HISTORY INTO CURRENT RESULTS ----------
+      - name: Merge old history into current results
+        if: always()
+        run: |
+          mkdir -p allure-results
+          if [ -d allure-history/history ]; then
+            echo "Restoring history from cache..."
+            cp -r allure-history/history allure-results/history
+          else
+            echo "No previous history found, first run."
+          fi
+          echo "--- allure-results contents ---"
+          ls -la allure-results || true
+
+      # ---------- GENERATE REPORT ----------
+      - name: Generate Allure report
+        if: always()
+        run: |
+          if [ -z "$(ls -A allure-results 2>/dev/null | grep -v '^history$')" ]; then
+            echo "No test results found. Creating placeholder..."
+            mkdir -p allure-results
+            printf 'No test results were produced. Tests may have failed before producing output.\n' > allure-results/placeholder.txt
+          fi
+
+          allure generate allure-results -o allure-report --clean
+
+          mkdir -p allure-history
+          rm -rf allure-history/history
+          cp -r allure-report/history allure-history/history
+
+          echo "--- allure-report contents ---"
+          ls -la allure-report
+
+      # ---------- ARTIFACTS ----------
+      - name: Upload Allure report artifact
+        if: always()
+        uses: actions/upload-artifact@v4
         with:
-          name: allure-results
-          path: ./allure-results/
+          name: allure-report
+          path: allure-report/
+          retention-days: 14
+
+      - name: Upload Allure raw results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-results-raw
+          path: allure-results/
+          if-no-files-found: ignore
           retention-days: 7
 
-      - name: Upload Coverage Report
-        uses: actions/upload-artifact@v4
+      - name: Upload Coverage artifact
         if: always()
+        uses: actions/upload-artifact@v4
         with:
           name: coverage-report
-          path: ./coverage/
+          path: coverage/
+          if-no-files-found: ignore
           retention-days: 7
 
-      - name: Publish Allure Report
-        uses: simple-elf/allure-report-action@v1.11
+      # ---------- DEPLOY REPORT TO GITHUB PAGES ----------
+      - name: Deploy Allure report to GitHub Pages
         if: always()
+        uses: peaceiris/actions-gh-pages@v4
         with:
-          gh_token: ${{ secrets.GITHUB_TOKEN }}
-          allure_results: ./allure-results
-          allure_report: allure-report
-          allure_history: allure-history
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: allure-report
+          keep_files: true
+          user_name: "github-actions[bot]"
+          user_email: "github-actions[bot]@users.noreply.github.com"
+          commit_message: "Allure report: run #${{ github.run_number }}"
+
+      # ---------- FAIL JOB IF TESTS FAILED ----------
+      - name: Fail job if tests failed
+        if: steps.tests.outcome == 'failure'
+        run: |
+          echo "::error::Tests failed. Check the Allure report artifact or gh-pages branch."
+          exit 1
