@@ -34,7 +34,7 @@ database:
     space: "sessions"
 
   minio:
-    endpoint: "localhost:8333"
+    endpoint: "seaweedfs:8333"
     access_key: "any"
     secret_key: "any"
     bucket: "static"
