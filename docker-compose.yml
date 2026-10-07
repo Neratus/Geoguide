@@ -73,11 +73,11 @@ services:
       - "8333:8333"
       - "9333:9333"
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:8333/"]
+      test: ["CMD-SHELL", "nc -z localhost 8333 || exit 1"]
       interval: 5s
       timeout: 3s
-      retries: 10
-      start_period: 10s
+      retries: 15
+      start_period: 15s
 
 volumes:
   cassandra_data:
