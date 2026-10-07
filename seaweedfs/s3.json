@@ -1,11 +1,11 @@
 {
     "identities": [
         {
-            "name": "minioadmin",
+            "name": "any",
             "credentials": [
                 {
-                    "accessKey": "minioadmin",
-                    "secretKey": "minioadmin"
+                    "accessKey": "any",
+                    "secretKey": "any"
                 }
             ],
             "actions": [
