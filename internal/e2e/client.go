@@ -10,6 +10,9 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/Neratus/geoguide/internal/repository"
+	"github.com/Neratus/geoguide/internal/repository/config"
 )
 
 const (
@@ -22,6 +25,13 @@ type TestClient struct {
 	client  *http.Client
 	t       *testing.T
 	token   string
+}
+
+type testEnv struct {
+	dbURL  string
+	appURL string
+	cfg    *config.Config
+	repos  *repository.Repositories
 }
 
 func NewTestClient(t *testing.T, env *testEnv) *TestClient {

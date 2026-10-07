@@ -60,13 +60,6 @@ func (q *noopTaskQueue) Subscribe(taskName string, handler interfaces.TaskHandle
 func (q *noopTaskQueue) Run(ctx context.Context) error                                   { return nil }
 func (q *noopTaskQueue) Close() error                                                    { return nil }
 
-type testEnv struct {
-	dbURL  string
-	appURL string
-	cfg    *config.Config
-	repos  *repository.Repositories
-}
-
 func TestMain(m *testing.M) {
 	if err := os.Chdir("../.."); err != nil {
 		log.Fatalf("failed to chdir to project root: %v", err)
