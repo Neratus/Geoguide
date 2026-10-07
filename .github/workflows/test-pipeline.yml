@@ -11,14 +11,33 @@ permissions:
   contents: write
   pages: write
   id-token: write
+  actions: read
 
 concurrency:
   group: tests-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  build:
+    name: Build Application
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+          cache: true
+
+      - name: Build application
+        run: go build -v ./...
+
   unit-tests:
     name: Unit Tests
+    needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -28,36 +47,28 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.25"
+          go-version: "1.22"
+          cache: true
 
-      - name: Cache Go modules
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-unit-${{ hashFiles('**/go.sum') }}
-          restore-keys: ${{ runner.os }}-go-unit-
-
-      - name: Run Unit Tests & Generate Allure/JUnit
+      - name: Run Unit Tests
         id: unit
         continue-on-error: true
         run: |
-          mkdir -p allure-results coverage
-          make test-unit 
-          # go test -v ./... | go-junit-report > allure-results/junit-unit.xml
+          mkdir -p allure-results-unit coverage
+          make test-unit
 
       - name: Upload Unit Test Results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: allure-results-unit
-          path: allure-results/
+          path: allure-results-unit/
           retention-days: 1
           if-no-files-found: ignore
 
   integration-tests:
     name: Integration Tests
+    needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -67,24 +78,27 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Run Integration Tests (Docker)
+      - name: Run Integration Tests
         id: integration
         continue-on-error: true
         run: |
-          mkdir -p allure-results coverage
-          make test-ci
+          mkdir -p allure-results-integration coverage
+          # Если интеграционные тесты запускаются через docker-compose:
+          make test-ci 
+          # Или make test-integration, если он у вас уже настроен на вывод в allure-results-integration
 
       - name: Upload Integration Test Results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: allure-results-integration
-          path: allure-results/
+          path: allure-results-integration/
           retention-days: 1
           if-no-files-found: ignore
 
   e2e-tests:
     name: E2E Tests
+    needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -98,7 +112,7 @@ jobs:
         id: e2e
         continue-on-error: true
         run: |
-          mkdir -p allure-results coverage
+          mkdir -p allure-results-e2e coverage
           make test-e2e || echo "E2E tests skipped or failed"
 
       - name: Upload E2E Test Results
@@ -106,15 +120,35 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: allure-results-e2e
-          path: allure-results/
+          path: allure-results-e2e/
           retention-days: 1
           if-no-files-found: ignore
 
-  report-and-deploy:
-    name: Generate Allure Report & Deploy
-    runs-on: ubuntu-latest
+  test-summary:
+    name: Test Summary
     needs: [unit-tests, integration-tests, e2e-tests]
     if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all test results
+        uses: actions/download-artifact@v4
+        with:
+          pattern: allure-results-*
+          merge-multiple: true
+          path: test-results
+
+      - name: Generate Test Summary
+        uses: test-summary/action@v2
+        if: always()
+        with:
+          paths: "test-results/*.xml"
+          show: "all"
+
+  report-and-deploy:
+    name: Allure Report & Deploy
+    needs: [unit-tests, integration-tests, e2e-tests]
+    if: always()
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - name: Checkout code
@@ -138,10 +172,7 @@ jobs:
         run: |
           mkdir -p allure-results
           if [ -d "allure-history/history" ]; then
-            echo "Restoring history from previous run..."
             cp -r allure-history/history allure-results/history
-          else
-            echo "No previous history found, first run."
           fi
 
       - name: Install Allure CLI
@@ -150,12 +181,10 @@ jobs:
           curl -sSL -o /tmp/allure.tgz "https://github.com/allure-framework/allure2/releases/download/${ALLURE_VERSION}/allure-${ALLURE_VERSION}.tgz"
           sudo tar -zxf /tmp/allure.tgz -C /opt
           sudo ln -sf /opt/allure-${ALLURE_VERSION}/bin/allure /usr/local/bin/allure
-          allure --version
 
       - name: Generate Allure report
         run: |
           if [ -z "$(ls -A allure-results 2>/dev/null | grep -v '^history$')" ]; then
-            echo "No test results found. Creating placeholder..."
             printf 'No test results were produced.\n' > allure-results/placeholder.txt
           fi
           allure generate allure-results -o allure-report --clean
@@ -181,11 +210,11 @@ jobs:
           user_email: "github-actions[bot]@users.noreply.github.com"
           commit_message: "Allure report: run #${{ github.run_number }}"
 
-      - name: Fail job if any test stage failed
+      - name: Fail workflow if any test stage failed
         run: |
           if [ "${{ needs.unit-tests.result }}" == "failure" ] || \
              [ "${{ needs.integration-tests.result }}" == "failure" ] || \
              [ "${{ needs.e2e-tests.result }}" == "failure" ]; then
-            echo "::error::One or more test stages failed. Check the logs above."
+            echo "::error::One or more test stages failed."
             exit 1
           fi
