@@ -72,6 +72,12 @@ services:
     ports:
       - "8333:8333"
       - "9333:9333"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8333/"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
 
 volumes:
   cassandra_data:

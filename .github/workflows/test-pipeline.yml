@@ -50,11 +50,36 @@ jobs:
           go-version: "1.25"
           cache: true
 
-      - name: Start Postgres & Redis
+      - name: Start test infrastructure
         run: |
           docker compose -f docker-compose.yml \
             --profile postgres --profile redis \
-            up -d --wait postgres redis
+            up -d postgres redis seaweedfs
+
+          echo "Waiting for Postgres..."
+          for i in $(seq 1 30); do
+            docker compose -f docker-compose.yml exec -T postgres \
+              pg_isready -U app_user -d dev && break
+            sleep 2
+          done
+
+          echo "Waiting for Redis..."
+          for i in $(seq 1 30); do
+            docker compose -f docker-compose.yml exec -T redis \
+              redis-cli ping && break
+            sleep 2
+          done
+
+          echo "Waiting for SeaweedFS S3 on :8333 ..."
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:8333/ >/dev/null 2>&1; then
+              echo "SeaweedFS is up"
+              break
+            fi
+            sleep 2
+          done
+
+          echo "--- Containers ---"
           docker compose -f docker-compose.yml ps
 
       - name: Run Unit Tests
@@ -77,9 +102,7 @@ jobs:
 
       - name: Stop infrastructure
         if: always()
-        run: |
-          docker compose -f docker-compose.yml \
-            --profile postgres --profile redis down -v
+        run: docker compose -f docker-compose.yml down -v
 
   integration-tests:
     name: Integration Tests
@@ -99,11 +122,36 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Start Postgres & Redis
+      - name: Start test infrastructure
         run: |
           docker compose -f docker-compose.yml \
             --profile postgres --profile redis \
-            up -d --wait postgres redis
+            up -d postgres redis seaweedfs
+
+          echo "Waiting for Postgres..."
+          for i in $(seq 1 30); do
+            docker compose -f docker-compose.yml exec -T postgres \
+              pg_isready -U app_user -d dev && break
+            sleep 2
+          done
+
+          echo "Waiting for Redis..."
+          for i in $(seq 1 30); do
+            docker compose -f docker-compose.yml exec -T redis \
+              redis-cli ping && break
+            sleep 2
+          done
+
+          echo "Waiting for SeaweedFS S3 on :8333 ..."
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:8333/ >/dev/null 2>&1; then
+              echo "SeaweedFS is up"
+              break
+            fi
+            sleep 2
+          done
+
+          docker compose -f docker-compose.yml ps
 
       - name: Run Integration Tests
         run: |
@@ -125,9 +173,7 @@ jobs:
 
       - name: Stop infrastructure
         if: always()
-        run: |
-          docker compose -f docker-compose.yml \
-            --profile postgres --profile redis down -v
+        run: docker compose -f docker-compose.yml down -v
 
   e2e-tests:
     name: E2E Tests
@@ -147,13 +193,38 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Start Postgres & Redis
+      - name: Start test infrastructure
         run: |
           docker compose -f docker-compose.yml \
             --profile postgres --profile redis \
-            up -d --wait postgres redis
+            up -d postgres redis seaweedfs
 
-      - name: Build and start application in background
+          echo "Waiting for Postgres..."
+          for i in $(seq 1 30); do
+            docker compose -f docker-compose.yml exec -T postgres \
+              pg_isready -U app_user -d dev && break
+            sleep 2
+          done
+
+          echo "Waiting for Redis..."
+          for i in $(seq 1 30); do
+            docker compose -f docker-compose.yml exec -T redis \
+              redis-cli ping && break
+            sleep 2
+          done
+
+          echo "Waiting for SeaweedFS S3 on :8333 ..."
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:8333/ >/dev/null 2>&1; then
+              echo "SeaweedFS is up"
+              break
+            fi
+            sleep 2
+          done
+
+          docker compose -f docker-compose.yml ps
+
+      - name: Build and start application
         run: |
           go build -o /tmp/geoguide_api ./cmd/api
           nohup /tmp/geoguide_api -config config/config.yaml > /tmp/app.log 2>&1 &
@@ -178,6 +249,7 @@ jobs:
           DB_NAME: dev
           REDIS_HOST: 127.0.0.1
           REDIS_PORT: "6379"
+          S3_ENDPOINT: http://127.0.0.1:8333
         run: |
           mkdir -p allure-results-e2e coverage
           make test-e2e
@@ -191,7 +263,7 @@ jobs:
           retention-days: 1
           if-no-files-found: ignore
 
-      - name: Collect app log on failure
+      - name: Collect app and docker logs on failure
         if: failure()
         run: |
           echo "=== App log ==="
@@ -201,9 +273,7 @@ jobs:
 
       - name: Stop infrastructure
         if: always()
-        run: |
-          docker compose -f docker-compose.yml \
-            --profile postgres --profile redis down -v
+        run: docker compose -f docker-compose.yml down -v
 
   test-summary:
     name: Test Summary

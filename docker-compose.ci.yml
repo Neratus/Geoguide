@@ -96,6 +96,12 @@ services:
       - "8333:8333"
     networks:
       - test-net
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8333/"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
 
 networks:
   test-net:
