@@ -47,14 +47,20 @@ test-unit:
 test-integration:
 	@echo "$(CYAN)Запуск Integration-тестов...$(RESET)"
 	@mkdir -p allure-results-integration coverage
-	@go test -p 1 -v -tags=integration -coverprofile=coverage/coverage-integration.out -covermode=count ./internal/... | tee /tmp/int-test.log
+	@go install github.com/jstemmer/go-junit-report/v2@latest 2>/dev/null || true
+	@go test -p 1 -v -tags=integration \
+		-coverprofile=coverage/coverage-integration.out -covermode=count \
+		./internal/... | tee /tmp/int-test.log
 	@cat /tmp/int-test.log | go-junit-report > allure-results-integration/junit.xml
 	@echo "$(GREEN)Integration-тесты завершены.$(RESET)"
 
 test-e2e: 
 	@echo "$(CYAN)Запуск E2E-тестов...$(RESET)"
 	@mkdir -p allure-results-e2e coverage
-	@go test -p 1 -v -tags=e2e -coverprofile=coverage/coverage-e2e.out -covermode=count ./e2e/... | tee /tmp/e2e-test.log
+	@go install github.com/jstemmer/go-junit-report/v2@latest 2>/dev/null || true
+	@go test -p 1 -v -tags=e2e -timeout 10m \
+		-coverprofile=coverage/coverage-e2e.out -covermode=count \
+		./internal/e2e/... | tee /tmp/e2e-test.log
 	@cat /tmp/e2e-test.log | go-junit-report > allure-results-e2e/junit.xml
 	@echo "$(GREEN)E2E-тесты завершены.$(RESET)"
 
