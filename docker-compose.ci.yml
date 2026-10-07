@@ -69,10 +69,6 @@ services:
           ./internal/repository/... ./internal/usecase/... \
           2>&1 | tee /tmp/integration.log
 
-        echo "=== E2E TESTS ==="
-        go test -v -timeout 10m ./internal/e2e/... \
-          2>&1 | tee /tmp/e2e.log
-
         echo "=== REPORT ==="
         mkdir -p /app/coverage /app/allure-results
         cat /tmp/unit.log /tmp/integration.log /tmp/e2e.log \

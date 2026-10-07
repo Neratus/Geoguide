@@ -39,7 +39,7 @@ jobs:
     name: Unit Tests
     needs: build
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -50,9 +50,14 @@ jobs:
           go-version: "1.25"
           cache: true
 
+      - name: Start Postgres & Redis
+        run: |
+          docker compose -f docker-compose.yml \
+            --profile postgres --profile redis \
+            up -d --wait postgres redis
+          docker compose -f docker-compose.yml ps
+
       - name: Run Unit Tests
-        id: unit
-        continue-on-error: true
         run: |
           mkdir -p allure-results-unit coverage
           make test-unit
@@ -66,26 +71,44 @@ jobs:
           retention-days: 1
           if-no-files-found: ignore
 
+      - name: Collect docker logs on failure
+        if: failure()
+        run: docker compose -f docker-compose.yml logs --no-color
+
+      - name: Stop infrastructure
+        if: always()
+        run: |
+          docker compose -f docker-compose.yml \
+            --profile postgres --profile redis down -v
+
   integration-tests:
     name: Integration Tests
     needs: build
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+          cache: true
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: Start Postgres & Redis
+        run: |
+          docker compose -f docker-compose.yml \
+            --profile postgres --profile redis \
+            up -d --wait postgres redis
+
       - name: Run Integration Tests
-        id: integration
-        continue-on-error: true
         run: |
           mkdir -p allure-results-integration coverage
-          # Если интеграционные тесты запускаются через docker-compose:
-          make test-ci 
-          # Или make test-integration, если он у вас уже настроен на вывод в allure-results-integration
+          make test-integration
 
       - name: Upload Integration Test Results
         if: always()
@@ -96,24 +119,68 @@ jobs:
           retention-days: 1
           if-no-files-found: ignore
 
+      - name: Collect docker logs on failure
+        if: failure()
+        run: docker compose -f docker-compose.yml logs --no-color
+
+      - name: Stop infrastructure
+        if: always()
+        run: |
+          docker compose -f docker-compose.yml \
+            --profile postgres --profile redis down -v
+
   e2e-tests:
     name: E2E Tests
     needs: build
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+          cache: true
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: Start Postgres & Redis
+        run: |
+          docker compose -f docker-compose.yml \
+            --profile postgres --profile redis \
+            up -d --wait postgres redis
+
+      - name: Build and start application in background
+        run: |
+          go build -o /tmp/geoguide_api ./cmd/api
+          nohup /tmp/geoguide_api -config config/config.yaml > /tmp/app.log 2>&1 &
+          echo "Waiting for app on :8080 ..."
+          for i in $(seq 1 30); do
+            if (echo > /dev/tcp/127.0.0.1/8080) 2>/dev/null; then
+              echo "App is up"
+              break
+            fi
+            sleep 2
+          done
+          echo "--- App startup log ---"
+          cat /tmp/app.log || true
+
       - name: Run E2E Tests
-        id: e2e
-        continue-on-error: true
+        env:
+          APP_URL: http://127.0.0.1:8080
+          DB_HOST: 127.0.0.1
+          DB_PORT: "5433"
+          DB_USER: app_user
+          DB_PASSWORD: your_secure_password
+          DB_NAME: dev
+          REDIS_HOST: 127.0.0.1
+          REDIS_PORT: "6379"
         run: |
           mkdir -p allure-results-e2e coverage
-          make test-e2e || echo "E2E tests skipped or failed"
+          make test-e2e
 
       - name: Upload E2E Test Results
         if: always()
@@ -123,6 +190,20 @@ jobs:
           path: allure-results-e2e/
           retention-days: 1
           if-no-files-found: ignore
+
+      - name: Collect app log on failure
+        if: failure()
+        run: |
+          echo "=== App log ==="
+          cat /tmp/app.log || true
+          echo "=== Docker logs ==="
+          docker compose -f docker-compose.yml logs --no-color || true
+
+      - name: Stop infrastructure
+        if: always()
+        run: |
+          docker compose -f docker-compose.yml \
+            --profile postgres --profile redis down -v
 
   test-summary:
     name: Test Summary
@@ -178,7 +259,8 @@ jobs:
       - name: Install Allure CLI
         run: |
           ALLURE_VERSION=2.32.0
-          curl -sSL -o /tmp/allure.tgz "https://github.com/allure-framework/allure2/releases/download/${ALLURE_VERSION}/allure-${ALLURE_VERSION}.tgz"
+          curl -sSL -o /tmp/allure.tgz \
+            "https://github.com/allure-framework/allure2/releases/download/${ALLURE_VERSION}/allure-${ALLURE_VERSION}.tgz"
           sudo tar -zxf /tmp/allure.tgz -C /opt
           sudo ln -sf /opt/allure-${ALLURE_VERSION}/bin/allure /usr/local/bin/allure
 
@@ -211,10 +293,14 @@ jobs:
           commit_message: "Allure report: run #${{ github.run_number }}"
 
       - name: Fail workflow if any test stage failed
+        if: always()
         run: |
-          if [ "${{ needs.unit-tests.result }}" == "failure" ] || \
-             [ "${{ needs.integration-tests.result }}" == "failure" ] || \
-             [ "${{ needs.e2e-tests.result }}" == "failure" ]; then
+          echo "Unit:        ${{ needs.unit-tests.result }}"
+          echo "Integration: ${{ needs.integration-tests.result }}"
+          echo "E2E:         ${{ needs.e2e-tests.result }}"
+          if [ "${{ needs.unit-tests.result }}" = "failure" ] || \
+             [ "${{ needs.integration-tests.result }}" = "failure" ] || \
+             [ "${{ needs.e2e-tests.result }}" = "failure" ]; then
             echo "::error::One or more test stages failed."
             exit 1
           fi
