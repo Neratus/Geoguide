@@ -44,7 +44,6 @@ jobs:
           mkdir -p allure-results allure-history coverage
           ls -la
 
-      # ---------- RESTORE ALLURE HISTORY (for trends) ----------
       - name: Restore Allure history cache
         if: always()
         uses: actions/cache@v4
@@ -55,13 +54,11 @@ jobs:
             allure-history-${{ github.ref }}-
             allure-history-
 
-      # ---------- RUN TESTS (UNIT -> INTEGRATION -> E2E) ----------
       - name: Run tests (docker-compose.ci.yml)
         id: tests
         continue-on-error: true
         run: make test-ci
 
-      # ---------- INSTALL ALLURE CLI ON RUNNER ----------
       - name: Install Allure CLI
         if: always()
         run: |
@@ -71,7 +68,6 @@ jobs:
           sudo ln -sf /opt/allure-${ALLURE_VERSION}/bin/allure /usr/local/bin/allure
           allure --version
 
-      # ---------- MERGE OLD HISTORY INTO CURRENT RESULTS ----------
       - name: Merge old history into current results
         if: always()
         run: |
@@ -85,7 +81,6 @@ jobs:
           echo "--- allure-results contents ---"
           ls -la allure-results || true
 
-      # ---------- GENERATE REPORT ----------
       - name: Generate Allure report
         if: always()
         run: |
@@ -104,7 +99,6 @@ jobs:
           echo "--- allure-report contents ---"
           ls -la allure-report
 
-      # ---------- ARTIFACTS ----------
       - name: Upload Allure report artifact
         if: always()
         uses: actions/upload-artifact@v4
@@ -131,7 +125,6 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
-      # ---------- DEPLOY REPORT TO GITHUB PAGES ----------
       - name: Deploy Allure report to GitHub Pages
         if: always()
         uses: peaceiris/actions-gh-pages@v4
@@ -144,7 +137,6 @@ jobs:
           user_email: "github-actions[bot]@users.noreply.github.com"
           commit_message: "Allure report: run #${{ github.run_number }}"
 
-      # ---------- FAIL JOB IF TESTS FAILED ----------
       - name: Fail job if tests failed
         if: steps.tests.outcome == 'failure'
         run: |
