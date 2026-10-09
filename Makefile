@@ -36,6 +36,12 @@ RESET  = \033[0m
         clean clean-allure clean-docker clean-ci
 
 
+define ensure-tools
+	@which go-junit-report > /dev/null 2>&1 || \
+	  (echo "$(YELLOW)Устанавливаю go-junit-report...$(RESET)" && \
+	   go install github.com/jstemmer/go-junit-report/v2@latest)
+endef
+
 define ensure-golurectl
 	@which golurectl > /dev/null 2>&1 || \
 	  (echo "$(YELLOW)Устанавливаю golurectl...$(RESET)" && \
@@ -66,10 +72,12 @@ test-unit:
 	$(call prepare-allure-dir,allure-results-unit)
 	$(call prepare-allure-history,allure-results-unit)
 	$(call ensure-golurectl)
+	$(call ensure-tools)
 	@go test -p 1 -v -tags=postgres -json \
 		-coverprofile=coverage/coverage-unit.out -covermode=count \
-		$(TEST_PATHS) | golurectl -o allure-results-unit
-	@echo "$(GREEN)Unit-тесты завершены. Allure результаты сгенерированы.$(RESET)"
+		$(TEST_PATHS) | tee /tmp/unit-test.json | golurectl -o allure-results-unit
+	@go-junit-report -parser gojson < /tmp/unit-test.json > allure-results-unit/junit.xml
+	@echo "$(GREEN)Unit-тесты завершены. Allure JSON + JUnit XML сгенерированы.$(RESET)"
 
 
 test-integration:
@@ -77,10 +85,12 @@ test-integration:
 	$(call prepare-allure-dir,allure-results-integration)
 	$(call prepare-allure-history,allure-results-integration)
 	$(call ensure-golurectl)
+	$(call ensure-tools)
 	@go test -p 1 -v -tags=integration -json \
 		-coverprofile=coverage/coverage-integration.out -covermode=count \
-		./internal/... | golurectl -o allure-results-integration
-	@echo "$(GREEN)Integration-тесты завершены. Allure результаты сгенерированы.$(RESET)"
+		./internal/... | tee /tmp/int-test.json | golurectl -o allure-results-integration
+	@go-junit-report -parser gojson < /tmp/int-test.json > allure-results-integration/junit.xml
+	@echo "$(GREEN)Integration-тесты завершены. Allure JSON + JUnit XML сгенерированы.$(RESET)"
 
 
 test-e2e:
@@ -88,10 +98,12 @@ test-e2e:
 	$(call prepare-allure-dir,allure-results-e2e)
 	$(call prepare-allure-history,allure-results-e2e)
 	$(call ensure-golurectl)
+	$(call ensure-tools)
 	@go test -p 1 -v -tags=e2e -timeout 10m -json \
 		-coverprofile=coverage/coverage-e2e.out -covermode=count \
-		./internal/e2e/... | golurectl -o allure-results-e2e
-	@echo "$(GREEN)E2E-тесты завершены. Allure результаты сгенерированы.$(RESET)"
+		./internal/e2e/... | tee /tmp/e2e-test.json | golurectl -o allure-results-e2e
+	@go-junit-report -parser gojson < /tmp/e2e-test.json > allure-results-e2e/junit.xml
+	@echo "$(GREEN)E2E-тесты завершены. Allure JSON + JUnit XML сгенерированы.$(RESET)"
 
 
 test:
