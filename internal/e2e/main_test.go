@@ -278,6 +278,7 @@ func startTestEnv(t *testing.T) testEnv {
 	jwtSecret := []byte(cfg.Database.Auth.JWTSecret)
 	router := delivery.NewRouter(server, jwtSecret)
 	appServer := httptest.NewServer(router)
+	t.Logf("E2E server URL: %s", appServer.URL)
 	t.Cleanup(appServer.Close)
 
 	return testEnv{
