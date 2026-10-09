@@ -12,7 +12,7 @@ func TestE2E_DemoScenario(t *testing.T) {
 			if c.token == "" {
 				t.Fatal("token is empty after successful login")
 			}
-			t.Log(" User logged in successfully")
+			t.Log(" User logged-in successfully")
 		})
 
 		var russiaID string
