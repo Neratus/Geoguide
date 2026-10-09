@@ -92,7 +92,6 @@ test-integration:
 	@go-junit-report -parser gojson < /tmp/int-test.json > allure-results-integration/junit.xml
 	@echo "$(GREEN)Integration-тесты завершены. Allure JSON + JUnit XML сгенерированы.$(RESET)"
 
-
 test-e2e:
 	@echo "$(CYAN)Запуск E2E-тестов...$(RESET)"
 	$(call prepare-allure-dir,allure-results-e2e)
