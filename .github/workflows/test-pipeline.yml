@@ -336,18 +336,27 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          RUN_ID=$(gh api \
-            "/repos/${{ github.repository }}/actions/workflows/${{ github.workflow }}/runs?per_page=10" \
-            --jq '[.workflow_runs[] | select(.status == "completed" and .conclusion != "cancelled")][0].id' \
+          WORKFLOW_FILE="test-pipeline.yml"
+          API="/repos/${{ github.repository }}/actions/workflows/${WORKFLOW_FILE}/runs?per_page=20"
+
+          RUN_ID=$(gh api "$API" \
+            --jq '[.workflow_runs[] | select(.status=="completed" and .conclusion!="cancelled")][0].id' \
             2>/dev/null || echo "")
+
+          # если первый в списке — текущий запуск, берём следующий
           if [ "$RUN_ID" = "${{ github.run_id }}" ]; then
-            RUN_ID=$(gh api \
-              "/repos/${{ github.repository }}/actions/workflows/${{ github.workflow }}/runs?per_page=10" \
-              --jq '[.workflow_runs[] | select(.status == "completed" and .conclusion != "cancelled")][1].id' \
+            RUN_ID=$(gh api "$API" \
+              --jq '[.workflow_runs[] | select(.status=="completed" and .conclusion!="cancelled")][1].id' \
               2>/dev/null || echo "")
           fi
+
+          # валидация: только цифры
+          case "$RUN_ID" in
+            ''|*[!0-9]*) RUN_ID="" ;;
+          esac
+
           echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
-          echo "Previous run ID: $RUN_ID"
+          echo "Previous run ID: [$RUN_ID]"
 
       - name: Download unit Allure results
         uses: actions/download-artifact@v4
