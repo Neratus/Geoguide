@@ -330,6 +330,25 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Get previous run ID
+        id: prev-run
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          RUN_ID=$(gh api \
+            "/repos/${{ github.repository }}/actions/workflows/${{ github.workflow }}/runs?per_page=10" \
+            --jq '[.workflow_runs[] | select(.status == "completed" and .conclusion != "cancelled")][0].id' \
+            2>/dev/null || echo "")
+          if [ "$RUN_ID" = "${{ github.run_id }}" ]; then
+            RUN_ID=$(gh api \
+              "/repos/${{ github.repository }}/actions/workflows/${{ github.workflow }}/runs?per_page=10" \
+              --jq '[.workflow_runs[] | select(.status == "completed" and .conclusion != "cancelled")][1].id' \
+              2>/dev/null || echo "")
+          fi
+          echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
+          echo "Previous run ID: $RUN_ID"
+
       - name: Download unit Allure results
         uses: actions/download-artifact@v4
         continue-on-error: true
@@ -352,11 +371,14 @@ jobs:
           path: allure-results/e2e
 
       - name: Download previous Allure history
+        if: steps.prev-run.outputs.run_id != ''
         uses: actions/download-artifact@v4
         continue-on-error: true
         with:
           name: allure-history
           path: allure-history
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ steps.prev-run.outputs.run_id }}
 
       - name: Debug downloaded artifacts
         run: |
@@ -368,12 +390,13 @@ jobs:
       - name: Prepare history
         run: |
           mkdir -p allure-results/unit/history
+
           if [ -d "allure-history" ] && [ "$(ls -A allure-history 2>/dev/null)" ]; then
             cp -r allure-history/. allure-results/unit/history/
             echo "History copied:"
             ls -la allure-results/unit/history | head -n 20
           else
-            echo "No previous history found (first run)."
+            echo "No previous history found (first run). Empty history folder created."
           fi
 
       - name: Install Allure CLI
@@ -403,6 +426,9 @@ jobs:
             allure-results/integration \
             allure-results/e2e \
             -o allure-report --clean
+
+          echo "--- allure-report/history ---"
+          ls -la allure-report/history 2>/dev/null || echo "no history dir generated"
 
       - name: Save Allure history for next run
         if: always()
