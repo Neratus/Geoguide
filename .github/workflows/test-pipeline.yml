@@ -90,6 +90,12 @@ jobs:
           mkdir -p allure-results-unit coverage
           make test-unit
 
+      - name: Show unit results (debug)
+        if: always()
+        run: |
+          echo "--- allure-results-unit ---"
+          ls -la allure-results-unit || true
+
       - name: Upload Unit Test Results
         if: always()
         uses: actions/upload-artifact@v4
@@ -97,7 +103,7 @@ jobs:
           name: allure-results-unit
           path: allure-results-unit/
           retention-days: 1
-          if-no-files-found: ignore
+          if-no-files-found: warn
 
       - name: Collect docker logs on failure
         if: failure()
@@ -163,6 +169,12 @@ jobs:
           mkdir -p allure-results-integration coverage
           make test-integration
 
+      - name: Show integration results (debug)
+        if: always()
+        run: |
+          echo "--- allure-results-integration ---"
+          ls -la allure-results-integration || true
+
       - name: Upload Integration Test Results
         if: always()
         uses: actions/upload-artifact@v4
@@ -170,7 +182,7 @@ jobs:
           name: allure-results-integration
           path: allure-results-integration/
           retention-days: 1
-          if-no-files-found: ignore
+          if-no-files-found: warn
 
       - name: Collect docker logs on failure
         if: failure()
@@ -261,6 +273,12 @@ jobs:
           mkdir -p allure-results-e2e coverage
           make test-e2e
 
+      - name: Show e2e results (debug)
+        if: always()
+        run: |
+          echo "--- allure-results-e2e ---"
+          ls -la allure-results-e2e || true
+
       - name: Upload E2E Test Results
         if: always()
         uses: actions/upload-artifact@v4
@@ -268,7 +286,7 @@ jobs:
           name: allure-results-e2e
           path: allure-results-e2e/
           retention-days: 1
-          if-no-files-found: ignore
+          if-no-files-found: warn
 
       - name: Collect app and docker logs on failure
         if: failure()
@@ -299,7 +317,7 @@ jobs:
         uses: test-summary/action@v2
         if: always()
         with:
-          paths: "test-results/*.xml"
+          paths: "test-results/**/*.xml"
           show: "all"
 
   report-and-deploy:
@@ -312,25 +330,50 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Download ALL Allure results
+      - name: Download unit Allure results
         uses: actions/download-artifact@v4
+        continue-on-error: true
         with:
-          pattern: allure-results-*
-          merge-multiple: true
-          path: allure-results
+          name: allure-results-unit
+          path: allure-results/unit
+
+      - name: Download integration Allure results
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: allure-results-integration
+          path: allure-results/integration
+
+      - name: Download e2e Allure results
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: allure-results-e2e
+          path: allure-results/e2e
 
       - name: Download previous Allure history
         uses: actions/download-artifact@v4
+        continue-on-error: true
         with:
           name: allure-history
           path: allure-history
-        continue-on-error: true
 
-      - name: Merge history into current results
+      - name: Debug downloaded artifacts
         run: |
-          mkdir -p allure-results
-          if [ -d "allure-history/history" ]; then
-            cp -r allure-history/history allure-results/history
+          echo "--- allure-results tree ---"
+          find allure-results -maxdepth 2 -type d 2>/dev/null || true
+          echo "--- allure-history ---"
+          ls -la allure-history 2>/dev/null || true
+
+      - name: Prepare history
+        run: |
+          mkdir -p allure-results/unit/history
+          if [ -d "allure-history" ] && [ "$(ls -A allure-history 2>/dev/null)" ]; then
+            cp -r allure-history/. allure-results/unit/history/
+            echo "History copied:"
+            ls -la allure-results/unit/history | head -n 20
+          else
+            echo "No previous history found (first run)."
           fi
 
       - name: Install Allure CLI
@@ -340,13 +383,26 @@ jobs:
             "https://github.com/allure-framework/allure2/releases/download/${ALLURE_VERSION}/allure-${ALLURE_VERSION}.tgz"
           sudo tar -zxf /tmp/allure.tgz -C /opt
           sudo ln -sf /opt/allure-${ALLURE_VERSION}/bin/allure /usr/local/bin/allure
+          allure --version
 
       - name: Generate Allure report
         run: |
-          if [ -z "$(ls -A allure-results 2>/dev/null | grep -v '^history$')" ]; then
-            printf 'No test results were produced.\n' > allure-results/placeholder.txt
+          ANY=0
+          for d in allure-results/unit allure-results/integration allure-results/e2e; do
+            if [ -d "$d" ] && [ "$(ls -A "$d" 2>/dev/null | grep -v '^history$')" ]; then
+              ANY=1
+            fi
+          done
+          if [ "$ANY" = "0" ]; then
+            mkdir -p allure-results/unit
+            printf 'No test results were produced.\n' > allure-results/unit/placeholder.txt
           fi
-          allure generate allure-results -o allure-report --clean
+
+          allure generate \
+            allure-results/unit \
+            allure-results/integration \
+            allure-results/e2e \
+            -o allure-report --clean
 
       - name: Save Allure history for next run
         if: always()
@@ -355,7 +411,7 @@ jobs:
           name: allure-history
           path: allure-report/history/
           retention-days: 7
-          if-no-files-found: ignore
+          if-no-files-found: warn
 
       - name: Deploy Allure report to GitHub Pages
         if: always()
