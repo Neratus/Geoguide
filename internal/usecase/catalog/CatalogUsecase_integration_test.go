@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Neratus/geoguide/internal/delivery/dto"
 	"github.com/Neratus/geoguide/internal/domain"
 	"github.com/Neratus/geoguide/internal/mocks/builders"
 	city_repo "github.com/Neratus/geoguide/internal/repository/city"
