@@ -259,6 +259,7 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
       - name: Get previous run ID
         id: prev-run
         if: always()
@@ -280,24 +281,28 @@ jobs:
           esac
           echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
           echo "Previous run ID: [$RUN_ID]"
+
       - name: Download unit Allure results
         uses: actions/download-artifact@v4
         continue-on-error: true
         with:
           name: allure-results-unit
           path: allure/results/unit
+
       - name: Download integration Allure results
         uses: actions/download-artifact@v4
         continue-on-error: true
         with:
           name: allure-results-integration
           path: allure/results/integration
+
       - name: Download e2e Allure results
         uses: actions/download-artifact@v4
         continue-on-error: true
         with:
           name: allure-results-e2e
           path: allure/results/e2e
+
       - name: Download previous Allure history
         if: steps.prev-run.outputs.run_id != ''
         uses: actions/download-artifact@v4
@@ -307,16 +312,19 @@ jobs:
           path: allure-history
           github-token: ${{ secrets.GITHUB_TOKEN }}
           run-id: ${{ steps.prev-run.outputs.run_id }}
+
+      # ИСТОРИЯ КЛАДЁТСЯ В КОРЕНЬ allure/results/, А НЕ В ПОДПАПКУ unit
       - name: Prepare history
         run: |
-          mkdir -p allure/results/unit/history
+          mkdir -p allure/results/history
           if [ -d "allure-history" ] && [ "$(ls -A allure-history 2>/dev/null)" ]; then
-            cp -r allure-history/. allure/results/unit/history/
-            echo "History copied:"
-            ls -la allure/results/unit/history | head -n 20
+            cp -r allure-history/. allure/results/history/
+            echo "History copied to allure/results/history:"
+            ls -la allure/results/history | head -n 20
           else
             echo "No previous history found (first run)."
           fi
+
       - name: Install Allure CLI
         run: |
           ALLURE_VERSION=2.32.0
@@ -325,6 +333,7 @@ jobs:
           sudo tar -zxf /tmp/allure.tgz -C /opt
           sudo ln -sf /opt/allure-${ALLURE_VERSION}/bin/allure /usr/local/bin/allure
           allure --version
+
       - name: Generate Allure report
         run: |
           ANY=0
@@ -337,10 +346,17 @@ jobs:
             mkdir -p allure/results/unit
             printf 'No test results were produced.\n' > allure/results/unit/placeholder.txt
           fi
-          # Allure рекурсивно просканирует все папки внутри allure/results
+          echo "=== allure/results tree (top-level) ==="
+          ls -la allure/results/
+          echo "=== Generating report ==="
           allure generate allure/results -o allure/report --clean
-          echo "--- allure/report/history ---"
-          ls -la allure/report/history 2>/dev/null || echo "no history dir generated"
+          echo "=== allure/report structure ==="
+          ls -la allure/report/
+          echo "=== assets dir ==="
+          ls -la allure/report/assets/ 2>/dev/null || echo "!!! NO assets/ FOLDER — report will be blank !!!"
+          echo "=== index.html size ==="
+          wc -c allure/report/index.html
+
       - name: Save Allure history for next run
         if: always()
         uses: actions/upload-artifact@v4
@@ -349,6 +365,9 @@ jobs:
           path: allure/report/history/
           retention-days: 7
           if-no-files-found: warn
+
+      # ГЛАВНОЕ ИСПРАВЛЕНИЕ: force_orphan: true — ветка gh-pages
+      # пересоздаётся с нуля, никакого "микса" из старых и новых файлов.
       - name: Deploy Allure report to GitHub Pages
         if: always()
         uses: peaceiris/actions-gh-pages@v4
@@ -356,10 +375,11 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_branch: gh-pages
           publish_dir: allure/report
-          keep_files: true
+          force_orphan: true
           user_name: "github-actions[bot]"
           user_email: "github-actions[bot]@users.noreply.github.com"
           commit_message: "Allure report: run #${{ github.run_number }}"
+
       - name: Fail workflow if any test stage failed
         if: always()
         run: |
