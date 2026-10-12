@@ -7,7 +7,7 @@ import (
 
 	"github.com/Neratus/geoguide/internal/domain/interfaces"
 	"github.com/Neratus/geoguide/internal/domain/requests"
-	"github.com/Neratus/geoguide/internal/services"
+	"github.com/Neratus/geoguide/internal/pkg/jwt"
 	usecase_errors "github.com/Neratus/geoguide/internal/usecase"
 	"github.com/pquerna/otp/totp"
 	"golang.org/x/crypto/bcrypt"
@@ -56,7 +56,7 @@ func (uc *VerifyTwoFactorLoginUseCase) Execute(ctx context.Context, req requests
 		return "", usecase_errors.ErrInvalidTwoFactorCode
 	}
 
-	token, err := services.GenerateJWT(userID, user.GetRole())
+	token, err := jwt.GenerateJWT(userID, user.GetRole())
 	if err != nil {
 		uc.logger.Error("failed to generate JWT", "error", err)
 		return "", err

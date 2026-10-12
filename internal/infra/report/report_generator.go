@@ -1,4 +1,4 @@
-package services
+package report
 
 import (
 	"bytes"

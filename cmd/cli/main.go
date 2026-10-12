@@ -23,10 +23,14 @@ import (
 	"github.com/Neratus/geoguide/internal/domain"
 	"github.com/Neratus/geoguide/internal/domain/interfaces"
 	"github.com/Neratus/geoguide/internal/domain/requests"
-	"github.com/Neratus/geoguide/internal/logger"
+	"github.com/Neratus/geoguide/internal/infra/email"
+	"github.com/Neratus/geoguide/internal/infra/queue"
+	"github.com/Neratus/geoguide/internal/infra/report"
+	"github.com/Neratus/geoguide/internal/pkg/jwt"
+	"github.com/Neratus/geoguide/internal/pkg/logger"
+	ratelimiter "github.com/Neratus/geoguide/internal/pkg/ratelimit"
 	repository "github.com/Neratus/geoguide/internal/repository"
 	"github.com/Neratus/geoguide/internal/repository/config"
-	"github.com/Neratus/geoguide/internal/services"
 	"github.com/Neratus/geoguide/internal/usecase/admin"
 	"github.com/Neratus/geoguide/internal/usecase/analytics"
 	"github.com/Neratus/geoguide/internal/usecase/auth"
@@ -97,7 +101,7 @@ func main() {
 	favouriteRepo := repos.FavouriteRepo
 	staticRepo := repos.StaticRepo
 
-	emailNotifier, err := services.NewSMTPSender(
+	emailNotifier, err := email.NewSMTPSender(
 		cfg.SMTP.From,
 		cfg.SMTP.Password,
 		cfg.SMTP.Host,
@@ -110,30 +114,30 @@ func main() {
 	}
 
 	watermillLogger := watermill.NewStdLogger(false, false)
-	taskQueue, err := services.NewWatermillQueue(watermillLogger)
+	taskQueue, err := queue.NewWatermillQueue(watermillLogger)
 	if err != nil {
 		slog.Warn("task queue not available", "error", err)
 		taskQueue = nil
 	}
 	if taskQueue != nil {
 		go func() {
-			if err := services.RegisterAllConsumers(taskQueue, emailNotifier); err != nil {
+			if err := queue.RegisterAllConsumers(taskQueue, emailNotifier); err != nil {
 				slog.Error("failed to register consumers", "error", err)
 			}
-			if err := services.StartConsumers(context.Background(), taskQueue); err != nil {
+			if err := queue.StartConsumers(context.Background(), taskQueue); err != nil {
 				slog.Error("consumer error", "error", err)
 			}
 		}()
 		defer taskQueue.Close()
 	}
-	services.InitJWT(cfg.Database.Auth.JWTSecret)
+	jwt.InitJWT(cfg.Database.Auth.JWTSecret)
 
-	rateLimiter, err := services.NewRateLimiter(cfg)
+	rateLimiter, err := ratelimiter.NewRateLimiter(cfg)
 	if err != nil {
 		slog.Error("failed to init rate limiter", "error", err)
 		os.Exit(1)
 	}
-	reportGenService := services.NewReportGeneratorService(slog.Default())
+	reportGenService := report.NewReportGeneratorService(slog.Default())
 	generateReportUC := analytics.NewGenerateReportUseCase(placeRepo, userRepo, tripRepo, reportGenService, slog.Default())
 
 	registerUC := auth.NewRegisterUserUseCase(userRepo, sessionRepo, emailNotifier, taskQueue, slog.Default(), rateLimiter)
@@ -698,7 +702,7 @@ func seedWithRepos(ctx context.Context, repos *repository.Repositories, minioCli
 	}
 	fmt.Printf("Created country: %s (ID: %s)\n", russia.GetName(), russia.GetId())
 
-	imgID, err := uploadImageAndCreateStaticPage("images/a.jpg", "image/jpeg", "Country", russia.GetName())
+	imgID, err := uploadImageAndCreateStaticPage("templates/images/a.jpg", "image/jpeg", "Country", russia.GetName())
 	if err == nil {
 		russia.SetImageID(imgID)
 		if err := repos.CountryRepo.Update(ctx, russia); err != nil {
@@ -726,7 +730,7 @@ func seedWithRepos(ctx context.Context, repos *repository.Repositories, minioCli
 	}
 	fmt.Printf("Created city: %s (ID: %s)\n", moscow.GetName(), moscow.GetId())
 
-	imgID, err = uploadImageAndCreateStaticPage("images/b.jpg", "image/jpeg", "City", moscow.GetName())
+	imgID, err = uploadImageAndCreateStaticPage("templates/images/b.jpg", "image/jpeg", "City", moscow.GetName())
 	if err == nil {
 		moscow.SetImageId(imgID)
 		if err := repos.CityRepo.Update(ctx, moscow); err != nil {
@@ -759,7 +763,7 @@ func seedWithRepos(ctx context.Context, repos *repository.Repositories, minioCli
 	}
 	fmt.Printf("Created city: %s (ID: %s)\n", petersburg.GetName(), petersburg.GetId())
 
-	imgID, err = uploadImageAndCreateStaticPage("images/c.png", "image/png", "City", petersburg.GetName())
+	imgID, err = uploadImageAndCreateStaticPage("templates/images/c.png", "image/png", "City", petersburg.GetName())
 	if err == nil {
 		petersburg.SetImageId(imgID)
 		if err := repos.CityRepo.Update(ctx, petersburg); err != nil {

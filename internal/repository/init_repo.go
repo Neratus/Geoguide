@@ -11,7 +11,7 @@ import (
 	city_repo "github.com/Neratus/geoguide/internal/repository/city"
 	config "github.com/Neratus/geoguide/internal/repository/config"
 	country_repo "github.com/Neratus/geoguide/internal/repository/country"
-	favour_repo "github.com/Neratus/geoguide/internal/repository/favouritePlace"
+	favour_repo "github.com/Neratus/geoguide/internal/repository/favourite_place"
 	place_repo "github.com/Neratus/geoguide/internal/repository/place"
 	session_repo "github.com/Neratus/geoguide/internal/repository/session"
 	static_repo "github.com/Neratus/geoguide/internal/repository/static"

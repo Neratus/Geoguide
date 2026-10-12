@@ -9,7 +9,7 @@ import (
 	"github.com/Neratus/geoguide/internal/domain"
 	"github.com/Neratus/geoguide/internal/domain/interfaces"
 	"github.com/Neratus/geoguide/internal/domain/requests"
-	"github.com/Neratus/geoguide/internal/services"
+	"github.com/Neratus/geoguide/internal/pkg/jwt"
 	usecase_errors "github.com/Neratus/geoguide/internal/usecase"
 )
 
@@ -80,7 +80,7 @@ func (uc *LoginUseCase) Execute(ctx context.Context, req requests.LoginUserReque
 		}, nil
 	}
 
-	token, err := services.GenerateJWT(user.GetId(), user.GetRole())
+	token, err := jwt.GenerateJWT(user.GetId(), user.GetRole())
 	if err != nil {
 		return nil, err
 	}
