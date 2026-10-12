@@ -75,6 +75,15 @@ jobs:
         run: |
           mkdir -p allure/results/unit coverage
           make test-unit
+      - name: Debug - list unit results
+        if: always()
+        run: |
+          echo "=== Files in allure/results/unit ==="
+          ls -la allure/results/unit/ || true
+          echo "=== Size of junit-report.xml ==="
+          wc -c allure/results/unit/junit-report.xml 2>/dev/null || echo "no junit-report.xml"
+          echo "=== Head of junit-report.xml ==="
+          head -c 800 allure/results/unit/junit-report.xml 2>/dev/null || true
       - name: Show & upload coverage
         if: always()
         run: |
@@ -150,6 +159,12 @@ jobs:
         run: |
           mkdir -p allure/results/integration coverage
           make test-integration
+      - name: Debug - list integration results
+        if: always()
+        run: |
+          echo "=== Files in allure/results/integration ==="
+          ls -la allure/results/integration/ || true
+          wc -c allure/results/integration/junit-report.xml 2>/dev/null || echo "no junit-report.xml"
       - name: Show & upload coverage
         if: always()
         run: |
@@ -249,6 +264,12 @@ jobs:
         run: |
           mkdir -p allure/results/e2e coverage
           make test-e2e
+      - name: Debug - list e2e results
+        if: always()
+        run: |
+          echo "=== Files in allure/results/e2e ==="
+          ls -la allure/results/e2e/ || true
+          wc -c allure/results/e2e/junit-report.xml 2>/dev/null || echo "no junit-report.xml"
       - name: Show & upload coverage
         if: always()
         run: |
@@ -419,7 +440,7 @@ jobs:
           sudo ln -sf /opt/allure-${ALLURE_VERSION}/bin/allure /usr/local/bin/allure
           allure --version
 
-      # ---------- Генерация отчёта (multi-file) ----------
+      # ---------- Генерация отчёта (с JUnit XML plugin) ----------
       - name: Generate Allure report
         run: |
           ANY=0
@@ -432,14 +453,20 @@ jobs:
             mkdir -p allure/results/unit
             printf 'No test results were produced.\n' > allure/results/unit/placeholder.txt
           fi
-          echo "=== allure/results tree (top-level) ==="
-          ls -la allure/results/
-          echo "=== Generating report (multi-file) ==="
-          allure generate allure/results -o allure/report --clean
-          echo "=== allure/report structure ==="
+          echo "=== allure/results tree ==="
+          find allure/results -type f | sort
+          echo ""
+          echo "=== junit-report.xml sizes ==="
+          find allure/results -name "junit*.xml" -exec wc -c {} \;
+          echo ""
+          echo "=== Generating report with junit-xml plugin ==="
+          allure generate allure/results -o allure/report --clean --plugins junit-xml
+          echo ""
+          echo "=== allure/report tree ==="
           find allure/report -maxdepth 2 -type f | head -50
-          echo "=== index.html preview ==="
-          head -c 2000 allure/report/index.html
+          echo ""
+          echo "=== test-cases count ==="
+          ls -1 allure/report/data/test-cases/ 2>/dev/null | wc -l
           echo ""
           echo "=== index.html size ==="
           wc -c allure/report/index.html
@@ -493,19 +520,6 @@ jobs:
           user_name: "github-actions[bot]"
           user_email: "github-actions[bot]@users.noreply.github.com"
           commit_message: "Allure report: run #${{ github.run_number }}"
-
-      - name: Verify deployed structure on gh-pages
-        if: always()
-        run: |
-          git clone --depth=1 --branch=gh-pages \
-            "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" \
-            /tmp/gh-pages-check 2>/dev/null || true
-          echo "=== gh-pages top-level ==="
-          ls -la /tmp/gh-pages-check | head -30
-          echo "=== gh-pages index.html size ==="
-          wc -c /tmp/gh-pages-check/index.html 2>/dev/null || echo "no index.html"
-          echo "=== first 1500 bytes of index.html ==="
-          head -c 1500 /tmp/gh-pages-check/index.html 2>/dev/null || true
 
       - name: Fail workflow if any test stage failed
         if: always()
