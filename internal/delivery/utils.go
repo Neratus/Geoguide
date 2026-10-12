@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Neratus/geoguide/internal/api"
+	api "github.com/Neratus/geoguide/internal/delivery/gen/openapi"
 	"github.com/Neratus/geoguide/internal/delivery/middleware"
 	"github.com/Neratus/geoguide/internal/domain"
 	"github.com/labstack/echo/v4"

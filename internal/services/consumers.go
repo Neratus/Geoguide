@@ -24,6 +24,7 @@ func RegisterAllConsumers(queue interfaces.TaskQueue, notifier interfaces.Notifi
 		if err := json.Unmarshal(payload, &task); err != nil {
 			return err
 		}
+		return nil
 		return notifier.SendLoginNotification(ctx, task.Email, task.Username, task.IP, task.UserAgent)
 	}); err != nil {
 		return err
@@ -34,6 +35,7 @@ func RegisterAllConsumers(queue interfaces.TaskQueue, notifier interfaces.Notifi
 		if err := json.Unmarshal(payload, &task); err != nil {
 			return err
 		}
+		return nil
 		return notifier.SendUserBlockedNotification(ctx, task.Email, task.Username, task.Reason)
 	}); err != nil {
 		return err

@@ -2,7 +2,6 @@ package middleware
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -19,6 +18,8 @@ type contextKey string
 const (
 	UserIDKey      contextKey = "userID"
 	IsModeratorKey contextKey = "isModerator"
+	RoleKey        contextKey = "role"
+	RawTokenKey    contextKey = "rawToken"
 )
 
 func JWTAuthEcho(secret []byte) echo.MiddlewareFunc {
@@ -26,43 +27,53 @@ func JWTAuthEcho(secret []byte) echo.MiddlewareFunc {
 		return func(c echo.Context) error {
 			req := c.Request()
 
+			publicGetPrefixes := []string{
+				"/api/v1/countries", "/api/v1/cities", "/api/v1/places",
+				"/api/v1/files", "/api/v1/holidays",
+				"/api/v2/countries", "/api/v2/cities", "/api/v2/places",
+				"/api/v2/files", "/api/v2/holidays",
+			}
+			publicPaths := []string{
+				"/api/v1/auth/register", "/api/v1/auth/login",
+				"/api/v1/auth/2fa/verify", "/api/v1/auth/verify",
+				"/api/v2/auth/register", "/api/v2/auth/login",
+				"/api/v2/auth/2fa/verify", "/api/v2/auth/verify",
+				"/openapi.yaml", "/swagger",
+				"/api/v2/graphql", "/api/v2/playground",
+			}
+
+			isPublic := false
 			if req.Method == http.MethodGet {
-				publicGetPrefixes := []string{
-					"/api/v1/countries",
-					"/api/v1/cities",
-					"/api/v1/places",
-					"/api/v1/files",
-					"/api/v1/holidays",
-				}
 				for _, prefix := range publicGetPrefixes {
-					fmt.Println(prefix, req.URL.Path, strings.HasPrefix(req.URL.Path, prefix))
 					if strings.HasPrefix(req.URL.Path, prefix) {
-						return next(c)
+						isPublic = true
+						break
 					}
 				}
 			}
-
-			publicPaths := []string{
-				"/api/v1/auth/register",
-				"/api/v1/auth/login",
-				"/api/v1/auth/2fa/verify",
-				"/api/v1/auth/verify",
-				"/openapi.yaml",
-				"/swagger",
-			}
 			for _, p := range publicPaths {
-				fmt.Println(p, req.URL.Path, strings.HasPrefix(req.URL.Path, p))
 				if strings.HasPrefix(req.URL.Path, p) {
-					return next(c)
+					isPublic = true
+					break
 				}
 			}
 
 			authHeader := req.Header.Get("Authorization")
+
+			// Нет токена:
 			if authHeader == "" {
+				if isPublic {
+					return next(c) // пропускаем анонимно
+				}
 				return echo.NewHTTPError(http.StatusUnauthorized, "missing authorization header")
 			}
+
+			// Токен есть — парсим всегда, даже на публичных путях.
 			parts := strings.Split(authHeader, " ")
 			if len(parts) != 2 || parts[0] != "Bearer" {
+				if isPublic {
+					return next(c)
+				}
 				return echo.NewHTTPError(http.StatusUnauthorized, "invalid authorization header format")
 			}
 
@@ -74,21 +85,41 @@ func JWTAuthEcho(secret []byte) echo.MiddlewareFunc {
 				return secret, nil
 			})
 			if err != nil || !token.Valid {
+				if isPublic {
+					return next(c)
+				}
 				return echo.NewHTTPError(http.StatusUnauthorized, "invalid or expired token")
 			}
 
 			claims, ok := token.Claims.(jwt.MapClaims)
 			if !ok {
+				if isPublic {
+					return next(c)
+				}
 				return echo.NewHTTPError(http.StatusUnauthorized, "invalid token claims")
+			}
+
+			tokenType, _ := claims["type"].(string)
+			if tokenType == "refresh" {
+				if isPublic {
+					return next(c)
+				}
+				return echo.NewHTTPError(http.StatusUnauthorized, "refresh token cannot be used for API access")
 			}
 
 			userIDStr, ok := claims["user_id"].(string)
 			if !ok {
+				if isPublic {
+					return next(c)
+				}
 				return echo.NewHTTPError(http.StatusUnauthorized, "missing user_id in token")
 			}
 
 			userID, err := uuid.Parse(userIDStr)
 			if err != nil {
+				if isPublic {
+					return next(c)
+				}
 				return echo.NewHTTPError(http.StatusUnauthorized, "invalid user_id format")
 			}
 
@@ -97,8 +128,10 @@ func JWTAuthEcho(secret []byte) echo.MiddlewareFunc {
 
 			ctx := context.WithValue(req.Context(), UserIDKey, domain.UserID(userID))
 			ctx = context.WithValue(ctx, IsModeratorKey, isModerator)
-			c.SetRequest(req.WithContext(ctx))
+			ctx = context.WithValue(ctx, RoleKey, role)
+			ctx = context.WithValue(ctx, RawTokenKey, tokenStr)
 
+			c.SetRequest(req.WithContext(ctx))
 			return next(c)
 		}
 	}
@@ -122,6 +155,7 @@ func LoggerEcho(next echo.HandlerFunc) echo.HandlerFunc {
 			"duration_ms", duration.Milliseconds(),
 			"remote_addr", c.Request().RemoteAddr,
 		)
+
 		return err
 	}
 }
@@ -135,6 +169,7 @@ func CORSEcho(next echo.HandlerFunc) echo.HandlerFunc {
 		if c.Request().Method == http.MethodOptions {
 			return c.NoContent(http.StatusNoContent)
 		}
+
 		return next(c)
 	}
 }

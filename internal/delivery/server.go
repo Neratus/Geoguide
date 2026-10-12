@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/Neratus/geoguide/internal/api"
+	api "github.com/Neratus/geoguide/internal/delivery/gen/openapi"
 	"github.com/Neratus/geoguide/internal/domain"
 	"github.com/Neratus/geoguide/internal/domain/requests"
 	config "github.com/Neratus/geoguide/internal/repository/config"

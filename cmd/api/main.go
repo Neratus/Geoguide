@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/Neratus/geoguide/internal/delivery"
+	"github.com/Neratus/geoguide/internal/delivery/graphql/resolvers"
 	"github.com/Neratus/geoguide/internal/domain"
 	"github.com/Neratus/geoguide/internal/domain/interfaces"
 	"github.com/Neratus/geoguide/internal/logger"
@@ -192,12 +193,62 @@ func main() {
 		addFavUC, removeFavUC, getFavUC, getHolidays,
 		cfg,
 	)
+	gqlResolver := &resolvers.Resolver{
+		Logger: slog.Default(),
+
+		RegisterUC:      registerUC,
+		LoginUC:         loginUC,
+		UpdateProfileUC: updateProfileUC,
+		GetProfileUC:    getProfileUC,
+		LogoutUC:        logoutUC,
+		ModerateUserUC:  moderateUserUC,
+		VerifyContactUC: verifyContactUC,
+		Enable2FAUC:     enable2FAUC,
+		Verify2FAUC:     verify2FALoginUC,
+
+		GetCountriesUC:        getCountriesUC,
+		GetCountryUC:          getCountryUC,
+		GetCitiesUC:           getCitiesUC,
+		GetCityUC:             getCityUC,
+		SearchCitiesUC:        searchCitiesUC,
+		GetDistrictsUC:        getDistrictsUC,
+		GetTransportNodesUC:   getTransportNodesUC,
+		GetPlaceUC:            getPlaceUC,
+		GetPlacesByCityUC:     getPlacesByCityUC,
+		GetPlacesByCategoryUC: getPlacesByCategoryUC,
+		GetHolidaysUC:         getHolidays,
+
+		CreateTripUC:          createTripUC,
+		GetTripUC:             getTripUC,
+		GetUserTripsUC:        getUserTripsUC,
+		AddPlaceToTripUC:      addPlaceToTripUC,
+		RemovePlaceFromTripUC: removePlaceFromTripUC,
+		UpdateTripUC:          updateTripUC,
+		DeleteTripUC:          deleteTripUC,
+
+		CreateReviewUC:      createReviewUC,
+		GetReviewsByPlaceUC: getReviewsByPlaceUC,
+		GetUserReviewsUC:    getUserReviewsUC,
+		ModerateReviewUC:    moderateReviewUC,
+		DeleteReviewUC:      deleteReviewUC,
+
+		GetStaticPageUC: getStaticPageUC,
+
+		AddFavUC:    addFavUC,
+		RemoveFavUC: removeFavUC,
+		GetFavUC:    getFavUC,
+
+		GetUsersUC:          getUsersUC,
+		GetPendingReviewsUC: getPendingReviewsUC,
+
+		GenerateReportUC: generateReportUC,
+	}
 
 	jwtSecret := []byte(cfg.Database.Auth.JWTSecret)
 	if len(jwtSecret) == 0 {
 		jwtSecret = []byte("your-secret-key")
 	}
-	router := delivery.NewRouter(server, jwtSecret)
+	router := delivery.NewRouter(server, gqlResolver, jwtSecret)
 
 	srv := &http.Server{
 		Addr:         ":8080",
@@ -710,7 +761,30 @@ func seedWithRepos(ctx context.Context, repos *repository.Repositories, minioCli
 	if err := repos.UserRepo.Save(ctx, testUser); err != nil {
 		return fmt.Errorf("save test user: %w", err)
 	}
+	if err := repos.UserRepo.UpdateEmailVerified(ctx, testUser.GetId(), true); err != nil {
+		return fmt.Errorf("verify test user email: %w", err)
+	}
+
+	savedUser, err := repos.UserRepo.FindByUsername(ctx, "testuser")
+	if err != nil {
+		return fmt.Errorf("find test user after verification: %w", err)
+	}
+	if !savedUser.IsEmailVerified() {
+		return fmt.Errorf("test user email is NOT verified after UpdateEmailVerified — check repository implementation")
+	}
 	fmt.Printf("Created test user: testuser / TestPass123! (ID: %s)\n", testUserID)
+
+	testUserID = domain.UserID(uuid.New())
+	testUserEmail = "testuser1@example.com"
+	testUserPass = "TestPass123!"
+	hashedTestPass, _ = domain.HashPassword(testUserPass)
+	testUser = domain.NewUserFromDB(
+		testUserID, "testuser1", testUserEmail, hashedTestPass, "+79991234567", time.Now(), nil, "Russia", "", []string{},
+		false, nil, "", domain.UserRoleUser, true, true, false, "", nil,
+	)
+	if err := repos.UserRepo.Save(ctx, testUser); err != nil {
+		return fmt.Errorf("save test user: %w", err)
+	}
 
 	moderatorID := domain.UserID(uuid.New())
 	moderatorEmail := "moderator@example.com"

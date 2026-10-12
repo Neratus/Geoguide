@@ -61,16 +61,42 @@ func (q *noopTaskQueue) Run(ctx context.Context) error                          
 func (q *noopTaskQueue) Close() error                                                    { return nil }
 
 func TestMain(m *testing.M) {
-	if err := os.Chdir("../.."); err != nil {
-		log.Fatalf("failed to chdir to project root: %v", err)
+	if !isExternalMode() {
+		if err := os.Chdir("../.."); err != nil {
+			log.Fatalf("failed to chdir to project root: %v", err)
+		}
 	}
-	log.Println("Starting GeoGuide E2E test suite with Testcontainers...")
+	log.Println("Starting GeoGuide E2E test suite...")
 	code := m.Run()
 	log.Println("GeoGuide E2E test suite finished.")
 	os.Exit(code)
 }
 
+func isExternalMode() bool {
+	if strings.TrimRight(os.Getenv("E2E_APP_URL"), "/") != "" {
+		return true
+	}
+	return os.Getenv("CI") == ""
+}
+
+func externalAppURL() string {
+	if url := strings.TrimRight(os.Getenv("E2E_APP_URL"), "/"); url != "" {
+		return url
+	}
+	return "http://localhost:8080"
+}
+
 func startTestEnv(t *testing.T) testEnv {
+	t.Helper()
+	if isExternalMode() {
+		url := externalAppURL()
+		t.Logf("e2e: external mode, hitting real service at %s", url)
+		return testEnv{appURL: url}
+	}
+	return startEmbeddedEnv(t)
+}
+
+func startEmbeddedEnv(t *testing.T) testEnv {
 	t.Helper()
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	t.Cleanup(cancel)
@@ -215,7 +241,7 @@ func startTestEnv(t *testing.T) testEnv {
 	}
 	t.Cleanup(func() { repos.Close() })
 
-	if err := seedTestData(ctx, repos); err != nil {
+	if err := SeedTestData(ctx, repos); err != nil {
 		t.Logf("seed warning (non-fatal): %v", err)
 	}
 

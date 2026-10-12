@@ -1,6 +1,6 @@
 FROM golang:1.25-alpine
 
-RUN apk add --no-cache git make curl openjdk17 build-base openssl-dev pkgconf
+RUN apk add --no-cache git make curl openjdk17 build-base openssl-dev pkgconf tcpdump
 
 RUN curl -o allure.tar.gz -Ls https://repo1.maven.org/maven2/io/qameta/allure/allure-commandline/2.27.0/allure-commandline-2.27.0.tgz && \
     tar -zxvf allure.tar.gz -C /opt/ && \

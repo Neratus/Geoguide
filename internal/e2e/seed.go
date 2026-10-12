@@ -10,7 +10,7 @@ import (
 	"github.com/google/uuid"
 )
 
-func seedTestData(ctx context.Context, repos *repository.Repositories) error {
+func SeedTestData(ctx context.Context, repos *repository.Repositories) error {
 	russia := domain.NewCountryFromDB(
 		domain.CountryID(uuid.New()),
 		"Russia",

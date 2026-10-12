@@ -3,12 +3,15 @@ package delivery
 import (
 	"net/http"
 
-	"github.com/Neratus/geoguide/internal/api"
+	"github.com/99designs/gqlgen/graphql/playground"
+	api "github.com/Neratus/geoguide/internal/delivery/gen/openapi"
+	deliverygraphql "github.com/Neratus/geoguide/internal/delivery/graphql"
+	"github.com/Neratus/geoguide/internal/delivery/graphql/resolvers"
 	"github.com/Neratus/geoguide/internal/delivery/middleware"
 	"github.com/labstack/echo/v4"
 )
 
-func NewRouter(srv *Server, jwtSecret []byte) *echo.Echo {
+func NewRouter(srv *Server, gqlResolver *resolvers.Resolver, jwtSecret []byte) *echo.Echo {
 	e := echo.New()
 
 	e.Use(middleware.LoggerEcho)
@@ -18,6 +21,12 @@ func NewRouter(srv *Server, jwtSecret []byte) *echo.Echo {
 	api.RegisterHandlers(e, srv)
 
 	e.POST("/api/v1/auth/avatar", srv.UploadAvatar)
+
+	gqlHandler := deliverygraphql.NewHandler(gqlResolver)
+	e.Any("/api/v2/graphql", echo.WrapHandler(gqlHandler))
+	e.GET("/api/v2/playground", echo.WrapHandler(
+		playground.Handler("GeoGuide GraphQL", "/api/v2/graphql"),
+	))
 
 	e.File("/openapi.yaml", "api/openapi.yaml")
 	e.GET("/swagger", func(c echo.Context) error {
