@@ -47,6 +47,10 @@ jobs:
         with:
           go-version: "1.26.x"
           cache: true
+      - name: Add GOPATH bin to PATH
+        run: echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+      - name: Install golurectl
+        run: go install github.com/robotomize/go-allure/cmd/golurectl@latest
       - name: Start test infrastructure
         run: |
           docker compose -f docker-compose.yml --profile postgres --profile redis up -d postgres redis seaweedfs
@@ -80,11 +84,11 @@ jobs:
         run: |
           echo "=== Files in allure/results/unit ==="
           ls -la allure/results/unit/ || true
-          echo "=== Size of junit-report.xml ==="
-          wc -c allure/results/unit/junit-report.xml 2>/dev/null || echo "no junit-report.xml"
-          echo "=== Head of junit-report.xml ==="
-          head -c 800 allure/results/unit/junit-report.xml 2>/dev/null || true
-      - name: Show & upload coverage
+          echo "=== Count of Allure JSON files ==="
+          ls -1 allure/results/unit/*.json 2>/dev/null | wc -l || echo "no JSON files"
+          echo "=== Sample of result files ==="
+          head -c 500 allure/results/unit/*-result.json 2>/dev/null || true
+      - name: Show coverage
         if: always()
         run: |
           if [ -f coverage/coverage-unit.out ]; then
@@ -130,6 +134,10 @@ jobs:
         with:
           go-version: "1.26.x"
           cache: true
+      - name: Add GOPATH bin to PATH
+        run: echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+      - name: Install golurectl
+        run: go install github.com/robotomize/go-allure/cmd/golurectl@latest
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       - name: Start test infrastructure
@@ -164,8 +172,9 @@ jobs:
         run: |
           echo "=== Files in allure/results/integration ==="
           ls -la allure/results/integration/ || true
-          wc -c allure/results/integration/junit-report.xml 2>/dev/null || echo "no junit-report.xml"
-      - name: Show & upload coverage
+          echo "=== Count of Allure JSON files ==="
+          ls -1 allure/results/integration/*.json 2>/dev/null | wc -l || echo "no JSON files"
+      - name: Show coverage
         if: always()
         run: |
           if [ -f coverage/coverage-integration.out ]; then
@@ -211,6 +220,10 @@ jobs:
         with:
           go-version: "1.26.x"
           cache: true
+      - name: Add GOPATH bin to PATH
+        run: echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+      - name: Install golurectl
+        run: go install github.com/robotomize/go-allure/cmd/golurectl@latest
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       - name: Start test infrastructure
@@ -269,8 +282,9 @@ jobs:
         run: |
           echo "=== Files in allure/results/e2e ==="
           ls -la allure/results/e2e/ || true
-          wc -c allure/results/e2e/junit-report.xml 2>/dev/null || echo "no junit-report.xml"
-      - name: Show & upload coverage
+          echo "=== Count of Allure JSON files ==="
+          ls -1 allure/results/e2e/*.json 2>/dev/null | wc -l || echo "no JSON files"
+      - name: Show coverage
         if: always()
         run: |
           if [ -f coverage/coverage-e2e.out ]; then
@@ -440,7 +454,7 @@ jobs:
           sudo ln -sf /opt/allure-${ALLURE_VERSION}/bin/allure /usr/local/bin/allure
           allure --version
 
-      # ---------- Генерация отчёта (с JUnit XML plugin) ----------
+      # ---------- Генерация отчёта ----------
       - name: Generate Allure report
         run: |
           ANY=0
@@ -456,11 +470,13 @@ jobs:
           echo "=== allure/results tree ==="
           find allure/results -type f | sort
           echo ""
-          echo "=== junit-report.xml sizes ==="
-          find allure/results -name "junit*.xml" -exec wc -c {} \;
+          echo "=== Count of Allure JSON files per module ==="
+          for d in allure/results/unit allure/results/integration allure/results/e2e; do
+            echo "$d: $(ls -1 "$d"/*.json 2>/dev/null | wc -l) JSON files"
+          done
           echo ""
-          echo "=== Generating report with junit-xml plugin ==="
-          allure generate allure/results -o allure/report --clean --plugins junit-xml
+          echo "=== Generating report ==="
+          allure generate allure/results -o allure/report --clean
           echo ""
           echo "=== allure/report tree ==="
           find allure/report -maxdepth 2 -type f | head -50

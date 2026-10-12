@@ -9,7 +9,6 @@ ALLURE_BASE     = allure
 ALLURE_RESULTS  = $(ALLURE_BASE)/results
 ALLURE_HISTORY  = $(ALLURE_BASE)/history
 ALLURE_REPORT   = $(ALLURE_BASE)/report
-JUNIT_REPORT    = junit-report.xml
 
 SONAR_PROJECT_PROPS = sonar-project.properties
 SONAR_SCANNER       = sonar-scanner
@@ -43,6 +42,12 @@ define ensure-tools
 	   go install github.com/jstemmer/go-junit-report/v2@latest)
 endef
 
+define ensure-golurectl
+	@which golurectl > /dev/null 2>&1 || \
+	  (echo "$(YELLOW)Устанавливаю golurectl...$(RESET)" && \
+	   go install github.com/robotomize/go-allure/cmd/golurectl@latest)
+endef
+
 define ensure-gocovmerge
 	@which gocovmerge > /dev/null 2>&1 || \
 	  (echo "$(YELLOW)Устанавливаю gocovmerge...$(RESET)" && \
@@ -69,58 +74,50 @@ define prepare-allure-history
 	fi
 endef
 
-# ======================= UNIT =======================
-
 test-unit:
 	@echo "$(CYAN)Запуск Unit-тестов...$(RESET)"
 	$(call prepare-allure-dir,$(ALLURE_RESULTS)/unit)
-	$(call ensure-tools)
+	$(call ensure-golurectl)
 	@mkdir -p coverage
-	@go test -p 1 -v -tags=postgres \
+	@go test -p 1 -json -tags=postgres \
 		-coverpkg=./internal/... -covermode=count \
 		-coverprofile=coverage/coverage-unit.out \
-		$(TEST_PATHS) 2>&1 | tee /tmp/unit-test.log
-	@go-junit-report < /tmp/unit-test.log > $(ALLURE_RESULTS)/unit/junit-report.xml
-	@echo "$(GREEN)Unit-тесты завершены. JUnit XML сгенерирован.$(RESET)"
-
-# =================== INTEGRATION ====================
+		$(TEST_PATHS) 2>/dev/null | golurectl -o $(ALLURE_RESULTS)/unit
+	@echo "$(GREEN)Unit-тесты завершены. Результаты Allure записаны.$(RESET)"
 
 test-integration:
 	@echo "$(CYAN)Запуск Integration-тестов...$(RESET)"
 	$(call prepare-allure-dir,$(ALLURE_RESULTS)/integration)
-	$(call ensure-tools)
+	$(call ensure-golurectl)
 	@mkdir -p coverage
-	@go test -p 1 -v -tags=integration \
+	@go test -p 1 -json -tags=integration \
 		-coverpkg=./internal/... -covermode=count \
 		-coverprofile=coverage/coverage-integration.out \
-		$(ALL_PATHS) 2>&1 | tee /tmp/int-test.log
-	@go-junit-report < /tmp/int-test.log > $(ALLURE_RESULTS)/integration/junit-report.xml
-	@echo "$(GREEN)Integration-тесты завершены. JUnit XML сгенерирован.$(RESET)"
+		$(ALL_PATHS) 2>/dev/null | golurectl -o $(ALLURE_RESULTS)/integration
+	@echo "$(GREEN)Integration-тесты завершены.$(RESET)"
 
-# ======================= E2E =========================
 
 test-e2e-local:
 	@echo "$(CYAN)Запуск E2E-тестов (локально)...$(RESET)"
-	@mkdir -p $(ALLURE_RESULTS)/e2e coverage
-	@go install github.com/jstemmer/go-junit-report/v2@latest 2>/dev/null || true
-	@go test -p 1 -v -tags=e2e -timeout 10m \
+	$(call prepare-allure-dir,$(ALLURE_RESULTS)/e2e)
+	$(call ensure-golurectl)
+	@mkdir -p coverage
+	@go test -p 1 -json -tags=e2e -timeout 10m \
 		-coverpkg=./internal/... -covermode=count \
 		-coverprofile=coverage/coverage-e2e.out \
-		./internal/e2e/... 2>&1 | tee /tmp/e2e-test.log
-	@go-junit-report < /tmp/e2e-test.log > $(ALLURE_RESULTS)/e2e/junit-report.xml
+		./internal/e2e/... 2>/dev/null | golurectl -o $(ALLURE_RESULTS)/e2e
 	@echo "$(GREEN)E2E-тесты завершены.$(RESET)"
 
 test-e2e:
 	@echo "$(CYAN)Запуск E2E-тестов (CI)...$(RESET)"
 	$(call prepare-allure-dir,$(ALLURE_RESULTS)/e2e)
-	$(call ensure-tools)
+	$(call ensure-golurectl)
 	@mkdir -p coverage
-	@go test -p 1 -v -tags=e2e -timeout 10m \
+	@go test -p 1 -json -tags=e2e -timeout 10m \
 		-coverpkg=./internal/... -covermode=count \
 		-coverprofile=coverage/coverage-e2e.out \
-		./internal/e2e/... 2>&1 | tee /tmp/e2e-test.log
-	@go-junit-report < /tmp/e2e-test.log > $(ALLURE_RESULTS)/e2e/junit-report.xml
-	@echo "$(GREEN)E2E-тесты завершены. JUnit XML сгенерирован.$(RESET)"
+		./internal/e2e/... 2>/dev/null | golurectl -o $(ALLURE_RESULTS)/e2e
+	@echo "$(GREEN)E2E-тесты завершены.$(RESET)"
 
 # ====================== ОБЩИЕ ========================
 
@@ -211,7 +208,7 @@ coverage-dashboard-open:
 test-allure: clean-allure
 	@echo "$(CYAN)Генерация единого Allure отчёта из всех модулей...$(RESET)"
 	@mkdir -p $(ALLURE_RESULTS) $(ALLURE_REPORT)
-	@allure generate $(ALLURE_RESULTS) -o $(ALLURE_REPORT) --clean --plugins junit-xml
+	@allure generate $(ALLURE_RESULTS) -o $(ALLURE_REPORT) --clean
 	@echo "$(GREEN)Allure отчёт сгенерирован в $(ALLURE_REPORT)/$(RESET)"
 
 allure-open:
