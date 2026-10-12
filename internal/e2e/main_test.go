@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/Neratus/geoguide/internal/delivery"
+	"github.com/Neratus/geoguide/internal/delivery/graphql/resolvers"
 	"github.com/Neratus/geoguide/internal/domain/interfaces"
 	"github.com/Neratus/geoguide/internal/repository"
 	"github.com/Neratus/geoguide/internal/repository/config"
@@ -301,8 +302,59 @@ func startEmbeddedEnv(t *testing.T) testEnv {
 		cfg,
 	)
 
+	gqlResolver := &resolvers.Resolver{
+		Logger: slog.Default(),
+
+		RegisterUC:      nil,
+		LoginUC:         loginUC,
+		UpdateProfileUC: nil,
+		GetProfileUC:    getProfileUC,
+		LogoutUC:        logoutUC,
+		ModerateUserUC:  nil,
+		VerifyContactUC: nil,
+		Enable2FAUC:     nil,
+		Verify2FAUC:     nil,
+
+		GetCountriesUC:        getCountriesUC,
+		GetCountryUC:          getCountryUC,
+		GetCitiesUC:           getCitiesUC,
+		GetCityUC:             getCityUC,
+		SearchCitiesUC:        nil,
+		GetDistrictsUC:        nil,
+		GetTransportNodesUC:   nil,
+		GetPlaceUC:            getPlaceUC,
+		GetPlacesByCityUC:     getPlacesByCityUC,
+		GetPlacesByCategoryUC: nil,
+		GetHolidaysUC:         nil,
+
+		CreateTripUC:          createTripUC,
+		GetTripUC:             getTripUC,
+		GetUserTripsUC:        getUserTripsUC,
+		AddPlaceToTripUC:      addPlaceToTripUC,
+		RemovePlaceFromTripUC: removePlaceFromTripUC,
+		UpdateTripUC:          updateTripUC,
+		DeleteTripUC:          deleteTripUC,
+
+		CreateReviewUC:      createReviewUC,
+		GetReviewsByPlaceUC: getReviewsByPlaceUC,
+		GetUserReviewsUC:    getUserReviewsUC,
+		ModerateReviewUC:    moderateReviewUC,
+		DeleteReviewUC:      deleteReviewUC,
+
+		GetStaticPageUC: nil,
+
+		AddFavUC:    addFavUC,
+		RemoveFavUC: removeFavUC,
+		GetFavUC:    getFavUC,
+
+		GetUsersUC:          getUsersUC,
+		GetPendingReviewsUC: getPendingReviewsUC,
+
+		GenerateReportUC: nil,
+	}
+
 	jwtSecret := []byte(cfg.Database.Auth.JWTSecret)
-	router := delivery.NewRouter(server, jwtSecret)
+	router := delivery.NewRouter(server, gqlResolver, jwtSecret)
 	appServer := httptest.NewServer(router)
 	t.Logf("E2E server URL: %s", appServer.URL)
 	t.Cleanup(appServer.Close)

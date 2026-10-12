@@ -138,9 +138,9 @@ test-full:
 	@echo "$(CYAN)[4/5] Восстановление конфигурации на Postgres + Redis...$(RESET)"
 	@make test-restore
 
-	@echo "$(CYAN)[5/5] Объединение отчетов о покрытии (gocovmerge)...$(RESET)"
+	@echo "$(CYAN)[5/5] Объединение отчетов о покрытии...$(RESET)"
 	@which gocovmerge > /dev/null || (echo "Устанавливаю gocovmerge..." && go install github.com/wadey/gocovmerge@latest)
-	@gocovmerge cover-postgres.out cover-cassandra.out > $(COVER_OUT)
+	@go tool covdata textfmt -i=cover-postgres.out,cover-cassandra.out -o $(COVER_OUT)
 	@rm -f cover-postgres.out cover-cassandra.out
 
 	@echo "$(GREEN)Итоговое покрытие проекта:$(RESET)"
