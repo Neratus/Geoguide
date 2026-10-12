@@ -220,7 +220,7 @@ coverage-dashboard-open:
 test-allure: clean-allure
 	@echo "$(CYAN)Генерация единого Allure отчёта из всех модулей...$(RESET)"
 	@mkdir -p $(ALLURE_RESULTS) $(ALLURE_REPORT)
-	@allure generate $(ALLURE_RESULTS) -o $(ALLURE_REPORT) --clean --single-file
+	@allure generate $(ALLURE_RESULTS) -o $(ALLURE_REPORT) --clean
 	@echo "$(GREEN)Allure отчёт сгенерирован в $(ALLURE_REPORT)/$(RESET)"
 
 allure-open:
