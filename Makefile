@@ -1,14 +1,12 @@
 TEST_PATHS      = ./internal/repository/... ./internal/usecase/...
 CONFIG_FILE     = ./config/config.yaml
-ALL_PATHS       = ./internal/...
+ALL_PATHS       = $(TEST_PATHS)
 
 COVER_OUT       = coverage.out
 COVER_HTML      = coverage.html
-
-ALLURE_BASE     = allure
-ALLURE_RESULTS  = $(ALLURE_BASE)/results
-ALLURE_HISTORY  = $(ALLURE_BASE)/history
-ALLURE_REPORT   = $(ALLURE_BASE)/report
+ALLURE_RESULTS  = allure-results
+ALLURE_REPORT   = allure-report
+JUNIT_REPORT    = junit-report.xml
 
 SONAR_PROJECT_PROPS = sonar-project.properties
 SONAR_SCANNER       = sonar-scanner
@@ -27,14 +25,16 @@ YELLOW = \033[1;33m
 RED    = \033[0;31m
 RESET  = \033[0m
 
+
 .PHONY: help \
-        test-unit test-integration test-e2e test-e2e-local \
+        test-unit test-integration test-e2e \
         test test-full test-shuffle test-docker test-ci \
         coverage-cli coverage-html coverage-dashboard coverage-dashboard-open \
         test-allure allure-open \
         sonar sonar-setup sonar-check \
         prism yaml-lint test-restore \
         clean clean-allure clean-docker clean-ci
+
 
 define ensure-tools
 	@which go-junit-report > /dev/null 2>&1 || \
@@ -48,26 +48,19 @@ define ensure-golurectl
 	   go install github.com/robotomize/go-allure/cmd/golurectl@latest)
 endef
 
-define ensure-gocovmerge
-	@which gocovmerge > /dev/null 2>&1 || \
-	  (echo "$(YELLOW)Устанавливаю gocovmerge...$(RESET)" && \
-	   go install github.com/wadey/gocovmerge@latest)
-endef
-
 define prepare-allure-dir
 	@mkdir -p $(1) coverage
 	@echo "Go.Version=$(shell go version | awk '{print $$3}')" > $(1)/environment.properties
 	@echo "OS=$(shell uname -s) $(shell uname -m)" >> $(1)/environment.properties
 	@echo "CI=$(CI)" >> $(1)/environment.properties
 	@printf '{\n  "name": "GitHub Actions",\n  "type": "github",\n  "url": "%s/%s/actions/runs/%s"\n}\n' \
-	  "$(GITHUB_SERVER_URL)" "$(GITHUB_REPOSITORY)" "$(GITHUB_RUN_ID)" > $(1)/executor.json 2>/dev/null || true
+	  "$(GITHUB_SERVER_URL)" "$(GITHUB_REPOSITORY)" "$(GITHUB_RUN_ID)" > $(1)/executor.json
 endef
 
 define prepare-allure-history
-	@mkdir -p $(ALLURE_HISTORY)
-	@if [ -d "$(ALLURE_HISTORY)" ] && [ -n "$$(ls -A $(ALLURE_HISTORY) 2>/dev/null)" ]; then \
-	  mkdir -p $(1)/history; \
-	  cp -r $(ALLURE_HISTORY)/. $(1)/history/; \
+	@mkdir -p $(1)/history
+	@if [ -d "allure-history" ] && [ -n "$$(ls -A allure-history 2>/dev/null)" ]; then \
+	  cp -r allure-history/. $(1)/history/; \
 	  echo "$(GREEN)История Allure скопирована в $(1)/history$(RESET)"; \
 	else \
 	  echo "$(YELLOW)История Allure не найдена — первый запуск, начнём с чистого листа.$(RESET)"; \
@@ -76,64 +69,53 @@ endef
 
 test-unit:
 	@echo "$(CYAN)Запуск Unit-тестов...$(RESET)"
-	$(call prepare-allure-dir,$(ALLURE_RESULTS)/unit)
+	$(call prepare-allure-dir,allure-results-unit)
+	$(call prepare-allure-history,allure-results-unit)
 	$(call ensure-golurectl)
-	@mkdir -p coverage
-	@go test -p 1 -json -tags=postgres \
-		-coverpkg=./internal/... -covermode=count \
-		-coverprofile=coverage/coverage-unit.out \
-		$(TEST_PATHS) 2>/dev/null | golurectl -o $(ALLURE_RESULTS)/unit
-	@echo "$(GREEN)Unit-тесты завершены. Результаты Allure записаны.$(RESET)"
+	$(call ensure-tools)
+	@go test -p 1 -v -tags=postgres -json \
+		-coverprofile=coverage/coverage-unit.out -covermode=count \
+		$(TEST_PATHS) | tee /tmp/unit-test.json | golurectl -o allure-results-unit
+	@go-junit-report -parser gojson < /tmp/unit-test.json > allure-results-unit/junit.xml
+	@echo "$(GREEN)Unit-тесты завершены. Allure JSON + JUnit XML сгенерированы.$(RESET)"
+
 
 test-integration:
 	@echo "$(CYAN)Запуск Integration-тестов...$(RESET)"
-	$(call prepare-allure-dir,$(ALLURE_RESULTS)/integration)
+	$(call prepare-allure-dir,allure-results-integration)
+	$(call prepare-allure-history,allure-results-integration)
 	$(call ensure-golurectl)
-	@mkdir -p coverage
-	@go test -p 1 -json -tags=integration \
-		-coverpkg=./internal/... -covermode=count \
-		-coverprofile=coverage/coverage-integration.out \
-		$(ALL_PATHS) 2>/dev/null | golurectl -o $(ALLURE_RESULTS)/integration
-	@echo "$(GREEN)Integration-тесты завершены.$(RESET)"
+	$(call ensure-tools)
+	@go test -p 1 -v -tags=integration -json \
+		-coverprofile=coverage/coverage-integration.out -covermode=count \
+		./internal/... | tee /tmp/int-test.json | golurectl -o allure-results-integration
+	@go-junit-report -parser gojson < /tmp/int-test.json > allure-results-integration/junit.xml
+	@echo "$(GREEN)Integration-тесты завершены. Allure JSON + JUnit XML сгенерированы.$(RESET)"
 
-
-test-e2e-local:
-	@echo "$(CYAN)Запуск E2E-тестов (локально)...$(RESET)"
-	$(call prepare-allure-dir,$(ALLURE_RESULTS)/e2e)
-	$(call ensure-golurectl)
-	@mkdir -p coverage
-	@go test -p 1 -json -tags=e2e -timeout 10m \
-		-coverpkg=./internal/... -covermode=count \
-		-coverprofile=coverage/coverage-e2e.out \
-		./internal/e2e/... 2>/dev/null | golurectl -o $(ALLURE_RESULTS)/e2e
-	@echo "$(GREEN)E2E-тесты завершены.$(RESET)"
 
 test-e2e:
-	@echo "$(CYAN)Запуск E2E-тестов (CI)...$(RESET)"
-	$(call prepare-allure-dir,$(ALLURE_RESULTS)/e2e)
+	@echo "$(CYAN)Запуск E2E-тестов...$(RESET)"
+	$(call prepare-allure-dir,allure-results-e2e)
+	$(call prepare-allure-history,allure-results-e2e)
 	$(call ensure-golurectl)
-	@mkdir -p coverage
-	@go test -p 1 -json -tags=e2e -timeout 10m \
-		-coverpkg=./internal/... -covermode=count \
-		-coverprofile=coverage/coverage-e2e.out \
-		./internal/e2e/... 2>/dev/null | golurectl -o $(ALLURE_RESULTS)/e2e
-	@echo "$(GREEN)E2E-тесты завершены.$(RESET)"
+	$(call ensure-tools)
+	@go test -p 1 -v -tags=e2e -timeout 10m -json \
+		-coverprofile=coverage/coverage-e2e.out -covermode=count \
+		./internal/e2e/... | tee /tmp/e2e-test.json | golurectl -o allure-results-e2e
+	@go-junit-report -parser gojson < /tmp/e2e-test.json > allure-results-e2e/junit.xml
+	@echo "$(GREEN)E2E-тесты завершены. Allure JSON + JUnit XML сгенерированы.$(RESET)"
 
-# ====================== ОБЩИЕ ========================
 
 test:
 	@echo "$(CYAN)Запуск тестов с расчетом покрытия...$(RESET)"
-	@go test -p 1 -v -tags=postgres -coverpkg=./internal/... \
-		-coverprofile=$(COVER_OUT) -covermode=count $(ALL_PATHS)
+	@go test -p 1 -v -tags=postgres -coverprofile=$(COVER_OUT) -covermode=count $(ALL_PATHS)
 	@echo "\n$(GREEN)Итоговое покрытие по функциям (CLI):$(RESET)"
 	@go tool cover -func=$(COVER_OUT) | tail -n 1
 	@echo "$(GREEN)Полный отчет сохранен в $(COVER_OUT).$(RESET)"
 
 test-full:
 	@echo "$(CYAN)[1/5] Запуск тестов на текущей конфигурации (Postgres + Redis)...$(RESET)"
-	@go test -p 1 -v -tags=postgres -shuffle=on -count=1 \
-		-coverpkg=./internal/... \
-		-coverprofile=cover-postgres.out -covermode=count $(ALL_PATHS)
+	@go test -p 1 -v -tags=postgres -shuffle=on -count=1 -coverprofile=cover-postgres.out -covermode=count $(ALL_PATHS)
 
 	@echo "$(CYAN)[2/5] Переключение БД на Cassandra + Tarantool...$(RESET)"
 	@$(SED_I) 's/primary_type: "postgres"/primary_type: "cassandra"/' $(CONFIG_FILE)
@@ -142,15 +124,13 @@ test-full:
 	@grep -E "primary_type|cache_type" $(CONFIG_FILE) | head -n 2
 
 	@echo "$(CYAN)[3/5] Запуск тестов (shuffle + coverage) на новой БД...$(RESET)"
-	@go test -p 1 -v -tags=cassandra -shuffle=on -count=1 \
-		-coverpkg=./internal/... \
-		-coverprofile=cover-cassandra.out -covermode=count $(ALL_PATHS)
+	@go test -p 1 -v -tags=cassandra -shuffle=on -count=1 -coverprofile=cover-cassandra.out -covermode=count $(ALL_PATHS)
 
 	@echo "$(CYAN)[4/5] Восстановление конфигурации на Postgres + Redis...$(RESET)"
 	@make test-restore
 
-	@echo "$(CYAN)[5/5] Объединение отчетов о покрытии...$(RESET)"
-	$(call ensure-gocovmerge)
+	@echo "$(CYAN)[5/5] Объединение отчетов о покрытии (gocovmerge)...$(RESET)"
+	@which gocovmerge > /dev/null || (echo "Устанавливаю gocovmerge..." && go install github.com/wadey/gocovmerge@latest)
 	@gocovmerge cover-postgres.out cover-cassandra.out > $(COVER_OUT)
 	@rm -f cover-postgres.out cover-cassandra.out
 
@@ -161,18 +141,14 @@ test-full:
 
 test-shuffle:
 	@echo "$(CYAN)Запуск тестов в случайном порядке...$(RESET)"
-	@go test -p 1 -v -tags=postgres -shuffle=on -count=1 \
-		-coverpkg=./internal/... \
-		-coverprofile=$(COVER_OUT) -covermode=count $(ALL_PATHS)
+	@go test -p 1 -v -tags=postgres -shuffle=on -count=1 -coverprofile=$(COVER_OUT) -covermode=count $(ALL_PATHS)
 	@echo "\n$(GREEN)Итоговое покрытие (CLI):$(RESET)"
 	@go tool cover -func=$(COVER_OUT) | tail -n 1
-
-# =================== DOCKER / CI ====================
 
 test-docker:
 	@echo "$(CYAN)Запуск тестового стенда в Docker...$(RESET)"
 	@docker compose -f docker-compose.test.yml up --build --abort-on-container-exit --exit-code-from tester
-	@echo "$(GREEN)Тесты завершены. Отчеты сохранены в ./allure/results и ./coverage$(RESET)"
+	@echo "$(GREEN)Тесты завершены. Отчеты сохранены в ./allure-results и ./coverage$(RESET)"
 
 test-ci:
 	@echo "$(CYAN)Запуск CI тестового стенда (docker-compose.ci.yml)...$(RESET)"
@@ -181,8 +157,6 @@ test-ci:
 	echo "$(YELLOW)Очистка CI Docker-окружения...$(RESET)"; \
 	docker compose -f docker-compose.ci.yml down -v --remove-orphans; \
 	exit $$STATUS
-
-# ==================== COVERAGE ======================
 
 coverage-cli: $(COVER_OUT)
 	@echo "$(CYAN)Детальный отчет по покрытию (CLI):$(RESET)"
@@ -203,19 +177,29 @@ coverage-dashboard-open:
 	@echo "$(CYAN)Открытие дашборда покрытия в браузере...$(RESET)"
 	@open coverage-dashboard.html || xdg-open coverage-dashboard.html || start coverage-dashboard.html
 
-# ===================== ALLURE =======================
+$(COVER_OUT):
+	@go test -coverprofile=$(COVER_OUT) -covermode=count $(ALL_PATHS)
+
 
 test-allure: clean-allure
-	@echo "$(CYAN)Генерация единого Allure отчёта из всех модулей...$(RESET)"
-	@mkdir -p $(ALLURE_RESULTS) $(ALLURE_REPORT)
+	@echo "$(CYAN)Запуск тестов с генерацией Allure отчёта...$(RESET)"
+	@mkdir -p $(ALLURE_RESULTS)
+	@echo "Go.Version=$(shell go version | awk '{print $$3}')" > $(ALLURE_RESULTS)/environment.properties
+	@echo "Coverage=$(shell go tool cover -func=$(COVER_OUT) 2>/dev/null | tail -n 1 | awk '{print $$NF}')" >> $(ALLURE_RESULTS)/environment.properties
+
+	@go test -p 1 -v -tags=postgres -shuffle=on -count=1 -json \
+		-coverprofile=$(COVER_OUT) -covermode=count \
+		$(ALL_PATHS) | golurectl -o $(ALLURE_RESULTS)
+	@go tool cover -html=$(COVER_OUT) -o coverage.html
+
 	@allure generate $(ALLURE_RESULTS) -o $(ALLURE_REPORT) --clean
 	@echo "$(GREEN)Allure отчёт сгенерирован в $(ALLURE_REPORT)/$(RESET)"
+	@echo "$(GREEN)HTML отчет покрытия сгенерирован в coverage.html$(RESET)"
 
 allure-open:
 	@echo "$(CYAN)Открытие Allure отчёта...$(RESET)"
 	@allure open $(ALLURE_REPORT)
 
-# ===================== SONAR ========================
 
 sonar-check:
 	@which $(SONAR_SCANNER) > /dev/null || \
@@ -234,9 +218,7 @@ sonar-setup:
 
 sonar: sonar-check
 	@echo "$(CYAN)[1/2] Прогон тестов с покрытием...$(RESET)"
-	@go test -p 1 -tags=postgres -count=1 \
-		-coverpkg=./internal/... \
-		-coverprofile=$(COVER_OUT) -covermode=count $(ALL_PATHS)
+	@go test -p 1 -tags=postgres -count=1 -coverprofile=$(COVER_OUT) -covermode=count $(ALL_PATHS)
 	@echo "\n$(GREEN)Покрытие:$(RESET)"
 	@go tool cover -func=$(COVER_OUT) | tail -n 1
 
@@ -244,7 +226,6 @@ sonar: sonar-check
 	@$(SONAR_SCANNER) -Dsonar.host.url=$(SONAR_HOST_URL) -Dsonar.projectBaseDir=. -Dsonar.go.coverage.reportPaths=$(COVER_OUT)
 	@echo "$(GREEN)Анализ завершён. Отчёт: $(SONAR_HOST_URL)/dashboard?id=Neratus_geoguide$(RESET)"
 
-# ===================== УТИЛИТЫ ======================
 
 prism:
 	docker run --rm -v ${PWD}:/tmp -p 4010:4010 stoplight/prism:4 mock -h 0.0.0.0 /tmp/api/openapi.yaml
@@ -257,29 +238,30 @@ test-restore:
 	@$(SED_I) 's/cache_type: "tarantool"/cache_type: "redis"/' $(CONFIG_FILE)
 	@echo "$(GREEN)Конфиг восстановлен на Postgres + Redis.$(RESET)"
 
-# ===================== CLEAN ========================
-
 clean: clean-allure
 	@rm -f $(COVER_OUT) $(COVER_HTML) cover-postgres.out cover-cassandra.out \
-	  coverage/coverage-unit.out coverage/coverage-integration.out coverage/coverage-e2e.out
+	  coverage-unit.out coverage-integration.out coverage-e2e.out
 	@rm -rf .scannerwork
 	@echo "$(GREEN)Файлы покрытия и артефакты Sonar удалены.$(RESET)"
 
 clean-allure:
-	@rm -rf $(ALLURE_BASE) allure-history
-	@echo "$(GREEN)Все данные Allure очищены$(RESET)"
+	@rm -rf $(ALLURE_RESULTS) $(ALLURE_REPORT) $(JUNIT_REPORT) \
+	  allure-results-unit allure-results-integration allure-results-e2e \
+	  allure-history
+	@echo "$(GREEN)Allure результаты очищены$(RESET)"
 
 clean-docker:
 	@echo "$(YELLOW)Очистка тестового Docker-окружения...$(RESET)"
 	@docker compose -f docker-compose.test.yml down -v
-	@rm -rf ./allure ./coverage
+	@rm -rf ./allure-results ./coverage
 	@echo "$(GREEN)Окружение очищено$(RESET)"
 
 clean-ci:
 	@echo "$(YELLOW)Очистка CI Docker-окружения...$(RESET)"
 	@docker compose -f docker-compose.ci.yml down -v
-	@rm -rf ./allure ./coverage
+	@rm -rf ./allure-results ./coverage
 	@echo "$(GREEN)Окружение очищено$(RESET)"
+
 
 help:
 	@echo "$(CYAN)Доступные команды Makefile:$(RESET)"
