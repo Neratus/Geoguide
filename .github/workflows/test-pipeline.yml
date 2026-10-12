@@ -25,13 +25,11 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.25"
+          go-version: "1.23"
           cache: true
-
       - name: Build application
         run: go build -v ./...
 
@@ -43,33 +41,24 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.25"
+          go-version: "1.23"
           cache: true
-
       - name: Start test infrastructure
         run: |
-          docker compose -f docker-compose.yml \
-            --profile postgres --profile redis \
-            up -d postgres redis seaweedfs
-
+          docker compose -f docker-compose.yml --profile postgres --profile redis up -d postgres redis seaweedfs
           echo "Waiting for Postgres..."
           for i in $(seq 1 30); do
-            docker compose -f docker-compose.yml exec -T postgres \
-              pg_isready -U app_user -d dev && break
+            docker compose -f docker-compose.yml exec -T postgres pg_isready -U app_user -d dev && break
             sleep 2
           done
-
           echo "Waiting for Redis..."
           for i in $(seq 1 30); do
-            docker compose -f docker-compose.yml exec -T redis \
-              redis-cli ping && break
+            docker compose -f docker-compose.yml exec -T redis redis-cli ping && break
             sleep 2
           done
-
           echo "Waiting for SeaweedFS S3 port 8333..."
           for i in $(seq 1 60); do
             if (exec 3<>/dev/tcp/127.0.0.1/8333) 2>/dev/null; then
@@ -79,36 +68,23 @@ jobs:
             fi
             sleep 2
           done
-
           echo "--- Containers ---"
           docker compose -f docker-compose.yml ps
-          echo "--- SeaweedFS logs ---"
-          docker compose -f docker-compose.yml logs --tail=50 seaweedfs || true
-
       - name: Run Unit Tests
         run: |
-          mkdir -p allure-results-unit coverage
+          mkdir -p allure/results/unit coverage
           make test-unit
-
-      - name: Show unit results (debug)
-        if: always()
-        run: |
-          echo "--- allure-results-unit ---"
-          ls -la allure-results-unit || true
-
       - name: Upload Unit Test Results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: allure-results-unit
-          path: allure-results-unit/
+          path: allure/results/unit/
           retention-days: 1
           if-no-files-found: warn
-
       - name: Collect docker logs on failure
         if: failure()
         run: docker compose -f docker-compose.yml logs --no-color
-
       - name: Stop infrastructure
         if: always()
         run: docker compose -f docker-compose.yml down -v
@@ -121,36 +97,26 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.25"
+          go-version: "1.23"
           cache: true
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-
       - name: Start test infrastructure
         run: |
-          docker compose -f docker-compose.yml \
-            --profile postgres --profile redis \
-            up -d postgres redis seaweedfs
-
+          docker compose -f docker-compose.yml --profile postgres --profile redis up -d postgres redis seaweedfs
           echo "Waiting for Postgres..."
           for i in $(seq 1 30); do
-            docker compose -f docker-compose.yml exec -T postgres \
-              pg_isready -U app_user -d dev && break
+            docker compose -f docker-compose.yml exec -T postgres pg_isready -U app_user -d dev && break
             sleep 2
           done
-
           echo "Waiting for Redis..."
           for i in $(seq 1 30); do
-            docker compose -f docker-compose.yml exec -T redis \
-              redis-cli ping && break
+            docker compose -f docker-compose.yml exec -T redis redis-cli ping && break
             sleep 2
           done
-
           echo "Waiting for SeaweedFS S3 port 8333..."
           for i in $(seq 1 60); do
             if (exec 3<>/dev/tcp/127.0.0.1/8333) 2>/dev/null; then
@@ -160,34 +126,22 @@ jobs:
             fi
             sleep 2
           done
-
           docker compose -f docker-compose.yml ps
-          docker compose -f docker-compose.yml logs --tail=50 seaweedfs || true
-
       - name: Run Integration Tests
         run: |
-          mkdir -p allure-results-integration coverage
+          mkdir -p allure/results/integration coverage
           make test-integration
-
-      - name: Show integration results (debug)
-        if: always()
-        run: |
-          echo "--- allure-results-integration ---"
-          ls -la allure-results-integration || true
-
       - name: Upload Integration Test Results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: allure-results-integration
-          path: allure-results-integration/
+          path: allure/results/integration/
           retention-days: 1
           if-no-files-found: warn
-
       - name: Collect docker logs on failure
         if: failure()
         run: docker compose -f docker-compose.yml logs --no-color
-
       - name: Stop infrastructure
         if: always()
         run: docker compose -f docker-compose.yml down -v
@@ -200,36 +154,26 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.25"
+          go-version: "1.23"
           cache: true
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-
       - name: Start test infrastructure
         run: |
-          docker compose -f docker-compose.yml \
-            --profile postgres --profile redis \
-            up -d postgres redis seaweedfs
-
+          docker compose -f docker-compose.yml --profile postgres --profile redis up -d postgres redis seaweedfs
           echo "Waiting for Postgres..."
           for i in $(seq 1 30); do
-            docker compose -f docker-compose.yml exec -T postgres \
-              pg_isready -U app_user -d dev && break
+            docker compose -f docker-compose.yml exec -T postgres pg_isready -U app_user -d dev && break
             sleep 2
           done
-
           echo "Waiting for Redis..."
           for i in $(seq 1 30); do
-            docker compose -f docker-compose.yml exec -T redis \
-              redis-cli ping && break
+            docker compose -f docker-compose.yml exec -T redis redis-cli ping && break
             sleep 2
           done
-
           echo "Waiting for SeaweedFS S3 port 8333..."
           for i in $(seq 1 60); do
             if (exec 3<>/dev/tcp/127.0.0.1/8333) 2>/dev/null; then
@@ -239,10 +183,7 @@ jobs:
             fi
             sleep 2
           done
-
           docker compose -f docker-compose.yml ps
-          docker compose -f docker-compose.yml logs --tail=50 seaweedfs || true
-
       - name: Build and start application
         run: |
           go build -o /tmp/geoguide_api ./cmd/api
@@ -257,7 +198,6 @@ jobs:
           done
           echo "--- App startup log ---"
           cat /tmp/app.log || true
-
       - name: Run E2E Tests
         env:
           APP_URL: http://127.0.0.1:8080
@@ -270,24 +210,16 @@ jobs:
           REDIS_PORT: "6379"
           S3_ENDPOINT: http://127.0.0.1:8333
         run: |
-          mkdir -p allure-results-e2e coverage
+          mkdir -p allure/results/e2e coverage
           make test-e2e
-
-      - name: Show e2e results (debug)
-        if: always()
-        run: |
-          echo "--- allure-results-e2e ---"
-          ls -la allure-results-e2e || true
-
       - name: Upload E2E Test Results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: allure-results-e2e
-          path: allure-results-e2e/
+          path: allure/results/e2e/
           retention-days: 1
           if-no-files-found: warn
-
       - name: Collect app and docker logs on failure
         if: failure()
         run: |
@@ -295,7 +227,6 @@ jobs:
           cat /tmp/app.log || true
           echo "=== Docker logs ==="
           docker compose -f docker-compose.yml logs --no-color || true
-
       - name: Stop infrastructure
         if: always()
         run: docker compose -f docker-compose.yml down -v
@@ -312,7 +243,6 @@ jobs:
           pattern: allure-results-*
           merge-multiple: true
           path: test-results
-
       - name: Generate Test Summary
         uses: test-summary/action@v2
         if: always()
@@ -329,7 +259,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
       - name: Get previous run ID
         id: prev-run
         if: always()
@@ -338,47 +267,37 @@ jobs:
         run: |
           WORKFLOW_FILE="test-pipeline.yml"
           API="/repos/${{ github.repository }}/actions/workflows/${WORKFLOW_FILE}/runs?per_page=20"
-
           RUN_ID=$(gh api "$API" \
             --jq '[.workflow_runs[] | select(.status=="completed" and .conclusion!="cancelled")][0].id' \
             2>/dev/null || echo "")
-
-          # если первый в списке — текущий запуск, берём следующий
           if [ "$RUN_ID" = "${{ github.run_id }}" ]; then
             RUN_ID=$(gh api "$API" \
               --jq '[.workflow_runs[] | select(.status=="completed" and .conclusion!="cancelled")][1].id' \
               2>/dev/null || echo "")
           fi
-
-          # валидация: только цифры
           case "$RUN_ID" in
             ''|*[!0-9]*) RUN_ID="" ;;
           esac
-
           echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
           echo "Previous run ID: [$RUN_ID]"
-
       - name: Download unit Allure results
         uses: actions/download-artifact@v4
         continue-on-error: true
         with:
           name: allure-results-unit
-          path: allure-results/unit
-
+          path: allure/results/unit
       - name: Download integration Allure results
         uses: actions/download-artifact@v4
         continue-on-error: true
         with:
           name: allure-results-integration
-          path: allure-results/integration
-
+          path: allure/results/integration
       - name: Download e2e Allure results
         uses: actions/download-artifact@v4
         continue-on-error: true
         with:
           name: allure-results-e2e
-          path: allure-results/e2e
-
+          path: allure/results/e2e
       - name: Download previous Allure history
         if: steps.prev-run.outputs.run_id != ''
         uses: actions/download-artifact@v4
@@ -388,26 +307,16 @@ jobs:
           path: allure-history
           github-token: ${{ secrets.GITHUB_TOKEN }}
           run-id: ${{ steps.prev-run.outputs.run_id }}
-
-      - name: Debug downloaded artifacts
-        run: |
-          echo "--- allure-results tree ---"
-          find allure-results -maxdepth 2 -type d 2>/dev/null || true
-          echo "--- allure-history ---"
-          ls -la allure-history 2>/dev/null || true
-
       - name: Prepare history
         run: |
-          mkdir -p allure-results/unit/history
-
+          mkdir -p allure/results/unit/history
           if [ -d "allure-history" ] && [ "$(ls -A allure-history 2>/dev/null)" ]; then
-            cp -r allure-history/. allure-results/unit/history/
+            cp -r allure-history/. allure/results/unit/history/
             echo "History copied:"
-            ls -la allure-results/unit/history | head -n 20
+            ls -la allure/results/unit/history | head -n 20
           else
-            echo "No previous history found (first run). Empty history folder created."
+            echo "No previous history found (first run)."
           fi
-
       - name: Install Allure CLI
         run: |
           ALLURE_VERSION=2.32.0
@@ -416,50 +325,41 @@ jobs:
           sudo tar -zxf /tmp/allure.tgz -C /opt
           sudo ln -sf /opt/allure-${ALLURE_VERSION}/bin/allure /usr/local/bin/allure
           allure --version
-
       - name: Generate Allure report
         run: |
           ANY=0
-          for d in allure-results/unit allure-results/integration allure-results/e2e; do
+          for d in allure/results/unit allure/results/integration allure/results/e2e; do
             if [ -d "$d" ] && [ "$(ls -A "$d" 2>/dev/null | grep -v '^history$')" ]; then
               ANY=1
             fi
           done
           if [ "$ANY" = "0" ]; then
-            mkdir -p allure-results/unit
-            printf 'No test results were produced.\n' > allure-results/unit/placeholder.txt
+            mkdir -p allure/results/unit
+            printf 'No test results were produced.\n' > allure/results/unit/placeholder.txt
           fi
-
-          allure generate \
-            allure-results/unit \
-            allure-results/integration \
-            allure-results/e2e \
-            -o allure-report --clean
-
-          echo "--- allure-report/history ---"
-          ls -la allure-report/history 2>/dev/null || echo "no history dir generated"
-
+          # Allure рекурсивно просканирует все папки внутри allure/results
+          allure generate allure/results -o allure/report --clean
+          echo "--- allure/report/history ---"
+          ls -la allure/report/history 2>/dev/null || echo "no history dir generated"
       - name: Save Allure history for next run
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: allure-history
-          path: allure-report/history/
+          path: allure/report/history/
           retention-days: 7
           if-no-files-found: warn
-
       - name: Deploy Allure report to GitHub Pages
         if: always()
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_branch: gh-pages
-          publish_dir: allure-report
+          publish_dir: allure/report
           keep_files: true
           user_name: "github-actions[bot]"
           user_email: "github-actions[bot]@users.noreply.github.com"
           commit_message: "Allure report: run #${{ github.run_number }}"
-
       - name: Fail workflow if any test stage failed
         if: always()
         run: |
