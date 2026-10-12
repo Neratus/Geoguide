@@ -24,12 +24,12 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
 
       - name: Set up Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@v5
         with:
-          go-version: "1.26"
+          go-version: "1.25"
           cache: true
 
       - name: Build application
@@ -42,12 +42,12 @@ jobs:
     timeout-minutes: 20
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
 
       - name: Set up Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@v5
         with:
-          go-version: "1.26"
+          go-version: "1.25"
           cache: true
 
       - name: Start test infrastructure
@@ -98,7 +98,7 @@ jobs:
 
       - name: Upload Unit Test Results
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v4
         with:
           name: allure-results-unit
           path: allure-results-unit/
@@ -120,16 +120,16 @@ jobs:
     timeout-minutes: 25
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
 
       - name: Set up Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@v5
         with:
-          go-version: "1.26"
+          go-version: "1.25"
           cache: true
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
+        uses: docker/setup-buildx-action@v3
 
       - name: Start test infrastructure
         run: |
@@ -177,7 +177,7 @@ jobs:
 
       - name: Upload Integration Test Results
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v4
         with:
           name: allure-results-integration
           path: allure-results-integration/
@@ -199,16 +199,16 @@ jobs:
     timeout-minutes: 30
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
 
       - name: Set up Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@v5
         with:
-          go-version: "1.26"
+          go-version: "1.25"
           cache: true
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
+        uses: docker/setup-buildx-action@v3
 
       - name: Start test infrastructure
         run: |
@@ -281,7 +281,7 @@ jobs:
 
       - name: Upload E2E Test Results
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v4
         with:
           name: allure-results-e2e
           path: allure-results-e2e/
@@ -307,7 +307,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download all test results
-        uses: actions/upload-artifact@v7
+        uses: actions/download-artifact@v4
         with:
           pattern: allure-results-*
           merge-multiple: true
@@ -328,7 +328,7 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
 
       - name: Get previous run ID
         id: prev-run
@@ -359,21 +359,21 @@ jobs:
           echo "Previous run ID: [$RUN_ID]"
 
       - name: Download unit Allure results
-        uses: actions/upload-artifact@v7
+        uses: actions/download-artifact@v4
         continue-on-error: true
         with:
           name: allure-results-unit
           path: allure-results/unit
 
       - name: Download integration Allure results
-        uses: actions/upload-artifact@v7
+        uses: actions/download-artifact@v4
         continue-on-error: true
         with:
           name: allure-results-integration
           path: allure-results/integration
 
       - name: Download e2e Allure results
-        uses: actions/upload-artifact@v7
+        uses: actions/download-artifact@v4
         continue-on-error: true
         with:
           name: allure-results-e2e
@@ -381,7 +381,7 @@ jobs:
 
       - name: Download previous Allure history
         if: steps.prev-run.outputs.run_id != ''
-        uses: actions/upload-artifact@v7
+        uses: actions/download-artifact@v4
         continue-on-error: true
         with:
           name: allure-history
@@ -441,7 +441,7 @@ jobs:
 
       - name: Save Allure history for next run
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v4
         with:
           name: allure-history
           path: allure-report/history/
