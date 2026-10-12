@@ -18,11 +18,9 @@ import (
 	"github.com/google/uuid"
 )
 
-// Resolver — корневой GraphQL-резолвер, хранит все use-case'ы.
 type Resolver struct {
 	Logger *slog.Logger
 
-	// Auth
 	RegisterUC      *auth.RegisterUserUseCase
 	LoginUC         *auth.LoginUseCase
 	UpdateProfileUC *auth.UpdateUserProfileUseCase
@@ -33,7 +31,6 @@ type Resolver struct {
 	Enable2FAUC     *auth.EnableTwoFactorUseCase
 	Verify2FAUC     *auth.VerifyTwoFactorLoginUseCase
 
-	// Catalog
 	GetCountriesUC        *catalog.GetCountriesUseCase
 	GetCountryUC          *catalog.GetCountryUseCase
 	GetCitiesUC           *catalog.GetCitiesByCountryUseCase
@@ -46,7 +43,6 @@ type Resolver struct {
 	GetPlacesByCategoryUC *catalog.GetPlacesByCategoryUseCase
 	GetHolidaysUC         *catalog.GetHolidaysByDateUseCase
 
-	// Planner
 	CreateTripUC          *planner.CreateTripUseCase
 	GetTripUC             *planner.GetTripUseCase
 	GetUserTripsUC        *planner.GetUserTripsUseCase
@@ -55,26 +51,21 @@ type Resolver struct {
 	UpdateTripUC          *planner.UpdateTripUseCase
 	DeleteTripUC          *planner.DeleteTripUseCase
 
-	// Reviews
 	CreateReviewUC      *review.CreateReviewUseCase
 	GetReviewsByPlaceUC *review.GetReviewsByPlaceUseCase
 	GetUserReviewsUC    *review.GetUserReviewsUseCase
 	ModerateReviewUC    *review.ModerateReviewUseCase
 	DeleteReviewUC      *review.DeleteReviewUseCase
 
-	// Content
 	GetStaticPageUC *content.GetStaticPageByIDUseCase
 
-	// Favourites
 	AddFavUC    *favourites.AddFavouriteUseCase
 	RemoveFavUC *favourites.RemoveFavouriteUseCase
 	GetFavUC    *favourites.GetFavouritesUseCase
 
-	// Admin
 	GetUsersUC          *admin.GetUsersUseCase
 	GetPendingReviewsUC *admin.GetPendingReviewsUseCase
 
-	// Analytics
 	GenerateReportUC *analytics.GenerateReportUseCase
 }
 

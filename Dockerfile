@@ -23,6 +23,7 @@ WORKDIR /app
 COPY --from=builder /out/geoguide_api ./geoguide_api
 COPY config ./config
 COPY migrations ./migrations
+COPY templates ./templates
 
 
 EXPOSE 8080

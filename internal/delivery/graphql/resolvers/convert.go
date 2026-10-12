@@ -10,8 +10,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// ---------- primitive helpers ----------
-
 func derefString(s *string) string {
 	if s == nil {
 		return ""
@@ -135,7 +133,6 @@ func userFromProfile(p *requests.GetUserProfileResponse) *gen.User {
 }
 
 func stringsToUpper(s string) string {
-	// roles в домене хранятся в lowercase, GraphQL enum — uppercase.
 	switch s {
 	case "user":
 		return "USER"
@@ -146,8 +143,6 @@ func stringsToUpper(s string) string {
 	}
 	return s
 }
-
-// ---------- Country ----------
 
 func countrySummary(c requests.CountryResponse) *gen.Country {
 	out := &gen.Country{
@@ -244,8 +239,6 @@ func countryDetail(c requests.GetCountryResponse) *gen.CountryDetails {
 	return out
 }
 
-// ---------- City ----------
-
 func citySummary(c requests.CityResponse) *gen.City {
 	out := &gen.City{
 		ID:          uuid.UUID(c.ID),
@@ -300,8 +293,6 @@ func cityDetail(c requests.GetCityResponse) *gen.CityDetails {
 	return out
 }
 
-// ---------- District / Transport ----------
-
 func districtFromResponse(d requests.DistrictResponse) *gen.District {
 	out := &gen.District{
 		ID:          uuid.UUID(d.ID),
@@ -336,8 +327,6 @@ func transportNodeFromResponse(n requests.TransportNodeResponse) *gen.TransportN
 	}
 	return out
 }
-
-// ---------- Place ----------
 
 func placesFromResponse(items []requests.PlaceResponse) []*gen.Place {
 	out := make([]*gen.Place, 0, len(items))
@@ -414,8 +403,6 @@ func placeFromSummary(p requests.PlaceResponse) *gen.Place {
 	return out
 }
 
-// ---------- Trip ----------
-
 func tripSummaryFromCreate(t requests.CreateTripResponse) *gen.Trip {
 	out := &gen.Trip{
 		ID:        uuid.UUID(t.ID),
@@ -478,8 +465,6 @@ func tripFromDetail(t requests.GetTripResponse) *gen.Trip {
 	return out
 }
 
-// ---------- Review ----------
-
 func reviewFromCreateResponse(r requests.CreateReviewResponse) *gen.Review {
 	out := &gen.Review{
 		ID:          uuid.UUID(r.ID),
@@ -492,8 +477,6 @@ func reviewFromCreateResponse(r requests.CreateReviewResponse) *gen.Review {
 	}
 	return out
 }
-
-// ---------- coordinates ----------
 
 func parseCoords(s string) *gen.Coordinates {
 	if s == "" {

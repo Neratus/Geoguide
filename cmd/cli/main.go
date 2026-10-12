@@ -929,10 +929,6 @@ func generateRandomCode(length int) string {
 	return string(b)
 }
 
-// =========================================================
-//                            CLI
-// =========================================================
-
 type CLI struct {
 	ctx    context.Context
 	logger *slog.Logger
@@ -1116,8 +1112,6 @@ func (c *CLI) dispatch(cmd string, args []string) {
 		fmt.Printf("Unknown command: %s\n", cmd)
 	}
 }
-
-// ---- AUTH ----
 
 func (c *CLI) cmdRegister(args []string) {
 	if len(args) < 4 {
@@ -1391,8 +1385,6 @@ func (c *CLI) cmdVerify2FA(args []string) {
 	}
 	fmt.Printf("2FA successful, session token: %s\n", token)
 }
-
-// ---- CATALOG ----
 
 func (c *CLI) cmdCountries(args []string) {
 	limit, offset := 100, 0
@@ -1709,8 +1701,6 @@ func (c *CLI) cmdHolidays(args []string) {
 	}
 }
 
-// ---- PLANNER ----
-
 func (c *CLI) cmdCreateTrip(args []string) {
 	if len(args) < 5 {
 		fmt.Println(`Usage: create_trip <title> <start_date> <end_date> <budget> <user_id> [notes]`)
@@ -1957,8 +1947,6 @@ func (c *CLI) cmdDeleteTrip(args []string) {
 	fmt.Println("Trip deleted successfully")
 }
 
-// ---- REVIEWS ----
-
 func (c *CLI) cmdCreateReview(args []string) {
 	if len(args) < 5 {
 		fmt.Println(`Usage: create_review <user_id> <place_id> <rating> <comment> <visit_date> [image_url]`)
@@ -2171,8 +2159,6 @@ func (c *CLI) cmdPendingReviews(args []string) {
 	}
 }
 
-// ---- CONTENT ----
-
 func (c *CLI) cmdGetPage(args []string) {
 	if len(args) < 1 {
 		fmt.Println("Usage: get_page <id>")
@@ -2191,8 +2177,6 @@ func (c *CLI) cmdGetPage(args []string) {
 	fmt.Printf("Static page:\n  ID: %s\n  Slug: %s\n  Title: %s\n  Content: %s\n  Meta: %s\n  Image URL: %s\n  Image Alt: %s\n  Published: %t\n",
 		resp.ID, resp.Slug, resp.Title, resp.Content, resp.MetaDesc, resp.ImageURL, resp.ImageAlt, resp.IsPublished)
 }
-
-// ---- FAVOURITES ----
 
 func (c *CLI) cmdAddFavourite(args []string) {
 	if len(args) < 2 {
@@ -2278,8 +2262,6 @@ func (c *CLI) cmdFavourites(args []string) {
 	}
 }
 
-// ---- ADMIN ----
-
 func (c *CLI) cmdUsers(args []string) {
 	limit, offset := 50, 0
 	search := ""
@@ -2310,8 +2292,6 @@ func (c *CLI) cmdUsers(args []string) {
 			u.GetId(), u.GetUsername(), u.GetEmail(), u.GetRole(), u.IsBlocked(), u.GetRegisteredAt().Format(time.RFC3339))
 	}
 }
-
-// ---- ANALYTICS ----
 
 func (c *CLI) cmdReport(args []string) {
 	if len(args) < 2 {
@@ -2346,8 +2326,6 @@ func (c *CLI) cmdReport(args []string) {
 	}
 	fmt.Println(string(data))
 }
-
-// ---- HELPERS ----
 
 func parseCommandLine(line string) (string, []string) {
 	var args []string

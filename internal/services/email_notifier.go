@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/Neratus/geoguide/internal/domain/interfaces"
+	"gopkg.in/gomail.v2"
 )
 
 type SMTPSender struct {
@@ -33,42 +34,50 @@ func NewSMTPSender(from, password, host string, port int, templateDir string) (*
 }
 
 func (s *SMTPSender) Send(ctx context.Context, msg interfaces.NotifyMessage) error {
-	// m := gomail.NewMessage()
-	// m.SetHeader("From", s.from)
-	// m.SetHeader("To", msg.To)
-	// m.SetHeader("Subject", msg.Subject)
-	// if msg.IsHTML {
-	// 	m.SetBody("text/html", msg.Body)
-	// } else {
-	// 	m.SetBody("text/plain", msg.Body)
-	// }
+	m := gomail.NewMessage()
+	m.SetHeader("From", s.from)
+	m.SetHeader("To", msg.To)
+	m.SetHeader("Subject", msg.Subject)
+	if msg.IsHTML {
+		m.SetBody("text/html", msg.Body)
+	} else {
+		m.SetBody("text/plain", msg.Body)
+	}
 
-	// dialer := gomail.NewDialer(s.host, s.port, s.from, s.password)
-	// if s.port == 465 {
-	// 	dialer.SSL = true
-	// }
-	// if err := dialer.DialAndSend(m); err != nil {
-	// 	slog.Error("failed to send email", "error", err)
-	// 	return err
-	// }
-	// slog.Info("email sent successfully", "to", msg.To)
+	dialer := gomail.NewDialer(s.host, s.port, s.from, s.password)
+	if s.port == 465 {
+		dialer.SSL = true
+	}
+	if err := dialer.DialAndSend(m); err != nil {
+		slog.Error("failed to send email", "error", err)
+		return err
+	}
+	slog.Info("email sent successfully", "to", msg.To)
 	return nil
 }
 
 func (s *SMTPSender) SendTemplate(ctx context.Context, to, templateName string, data interface{}) error {
 	tmplPath := filepath.Join(s.templateDir, templateName+".html")
+
+	// Добавляем лог, чтобы видеть реальный путь при ошибке
+	slog.Debug("Reading email template", "path", tmplPath)
+
 	tmplBytes, err := os.ReadFile(tmplPath)
 	if err != nil {
-		return err
+		slog.Error("Failed to read template file", "path", tmplPath, "error", err)
+		return fmt.Errorf("failed to read template %s: %w", tmplPath, err)
 	}
+
 	tmpl, err := template.New(templateName).Parse(string(tmplBytes))
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to parse template %s: %w", tmplPath, err)
 	}
+
 	var body bytes.Buffer
 	if err := tmpl.Execute(&body, data); err != nil {
-		return err
+		return fmt.Errorf("failed to execute template %s: %w", tmplPath, err)
 	}
+
 	return s.Send(ctx, interfaces.NotifyMessage{
 		To:      to,
 		Subject: s.subjectFromTemplate(templateName),
@@ -129,7 +138,7 @@ func (s *SMTPSender) SendVerificationEmail(ctx context.Context, to, code string)
 		"TTL":  "15 minutes",
 	})
 	if err != nil {
-		// slog.Error("failed to send verification email", "error", err)
+		slog.Error("failed to send verification email", "error", err)
 	}
 	return nil
 }

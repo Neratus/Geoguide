@@ -14,11 +14,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// =========================================================
-//                       MUTATION
-// =========================================================
-
-// RegisterUser is the resolver for the registerUser field.
 func (r *mutationResolver) RegisterUser(ctx context.Context, input gen.RegisterUserInput) (*gen.User, error) {
 	req := requests.RegisterUserRequest{
 		Username:           input.Username,
@@ -32,10 +27,8 @@ func (r *mutationResolver) RegisterUser(ctx context.Context, input gen.RegisterU
 	if err != nil {
 		return nil, err
 	}
-	// После регистрации тянем полный профиль — он уже есть в БД.
 	profile, err := r.GetProfileUC.Execute(ctx, requests.GetUserProfileRequest{UserID: resp.ID})
 	if err != nil {
-		// fallback — минимальный User, если профиль почему-то недоступен
 		return &gen.User{
 			ID:                 uuid.UUID(resp.ID),
 			Username:           resp.Username,
@@ -47,7 +40,6 @@ func (r *mutationResolver) RegisterUser(ctx context.Context, input gen.RegisterU
 	return userFromProfile(profile), nil
 }
 
-// VerifyContact is the resolver for the verifyContact field.
 func (r *mutationResolver) VerifyContact(ctx context.Context, input gen.VerifyContactInput) (*gen.OperationResult, error) {
 	err := r.VerifyContactUC.Execute(ctx, requests.VerifyContactRequest{
 		UserID:  domain.UserID(input.UserID),
@@ -63,7 +55,6 @@ func (r *mutationResolver) VerifyContact(ctx context.Context, input gen.VerifyCo
 	return &gen.OperationResult{Success: true}, nil
 }
 
-// Login is the resolver for the login field.
 func (r *mutationResolver) Login(ctx context.Context, input gen.LoginInput) (*gen.LoginPayload, error) {
 	res, err := r.LoginUC.Execute(ctx, requests.LoginUserRequest{
 		Username: input.Username,
@@ -86,7 +77,6 @@ func (r *mutationResolver) Login(ctx context.Context, input gen.LoginInput) (*ge
 		return payload, nil
 	}
 
-	// Подтянем профиль, чтобы вернуть User-объект
 	if profile, err := r.GetProfileUC.Execute(ctx, requests.GetUserProfileRequest{UserID: res.ID}); err == nil {
 		payload.User = userFromProfile(profile)
 	} else {
@@ -102,7 +92,6 @@ func (r *mutationResolver) Login(ctx context.Context, input gen.LoginInput) (*ge
 	return payload, nil
 }
 
-// Logout is the resolver for the logout field.
 func (r *mutationResolver) Logout(ctx context.Context) (*gen.OperationResult, error) {
 	token := CurrentRawToken(ctx)
 	if token == "" {
@@ -120,7 +109,6 @@ func (r *mutationResolver) Logout(ctx context.Context) (*gen.OperationResult, er
 	return &gen.OperationResult{Success: true}, nil
 }
 
-// EnableTwoFactor is the resolver for the enableTwoFactor field.
 func (r *mutationResolver) EnableTwoFactor(ctx context.Context, input gen.EnableTwoFactorInput) (*gen.TwoFactorSetup, error) {
 	codes, err := r.Enable2FAUC.VerifyAndEnable(ctx, requests.EnableTwoFactorRequest{
 		UserID: domain.UserID(input.UserID),
@@ -132,11 +120,10 @@ func (r *mutationResolver) EnableTwoFactor(ctx context.Context, input gen.Enable
 	}
 	return &gen.TwoFactorSetup{
 		BackupCodes: codes,
-		OtpauthURI:  "", // заполним ниже, если есть GenerateSecret-подход
+		OtpauthURI:  "",
 	}, nil
 }
 
-// VerifyTwoFactor is the resolver for the verifyTwoFactor field.
 func (r *mutationResolver) VerifyTwoFactor(ctx context.Context, input gen.VerifyTwoFactorInput) (*gen.AuthToken, error) {
 	tok, err := r.Verify2FAUC.Execute(ctx, requests.VerifyTwoFactorRequest{
 		ChallengeID: input.ChallengeID,
@@ -184,7 +171,6 @@ func (r *mutationResolver) UpdateUserProfile(ctx context.Context, input gen.Upda
 	return userFromUpdateProfile(updated), nil
 }
 
-// ModerateUser is the resolver for the moderateUser field.
 func (r *mutationResolver) ModerateUser(ctx context.Context, input gen.ModerateUserInput) (*gen.User, error) {
 	modID, err := CurrentUserID(ctx)
 	if err != nil {
@@ -199,7 +185,6 @@ func (r *mutationResolver) ModerateUser(ctx context.Context, input gen.ModerateU
 	if err != nil {
 		return nil, err
 	}
-	// Вернём минимальный User с актуальными полями блокировки.
 	return &gen.User{
 		ID:        input.UserID,
 		Username:  "",
@@ -208,7 +193,6 @@ func (r *mutationResolver) ModerateUser(ctx context.Context, input gen.ModerateU
 	}, nil
 }
 
-// ModerateReview is the resolver for the moderateReview field.
 func (r *mutationResolver) ModerateReview(ctx context.Context, input gen.ModerateReviewInput) (*gen.Review, error) {
 	modID, err := CurrentUserID(ctx)
 	if err != nil {
@@ -223,7 +207,6 @@ func (r *mutationResolver) ModerateReview(ctx context.Context, input gen.Moderat
 	if err != nil {
 		return nil, err
 	}
-	// Минимальный Review с обновлёнными полями.
 	return &gen.Review{
 		ID:          uuid.UUID(res.ID),
 		IsApproved:  res.IsApproved,
@@ -231,7 +214,6 @@ func (r *mutationResolver) ModerateReview(ctx context.Context, input gen.Moderat
 	}, nil
 }
 
-// CreateTrip is the resolver for the createTrip field.
 func (r *mutationResolver) CreateTrip(ctx context.Context, input gen.CreateTripInput) (*gen.Trip, error) {
 	uid, err := CurrentUserID(ctx)
 	if err != nil {
@@ -251,7 +233,6 @@ func (r *mutationResolver) CreateTrip(ctx context.Context, input gen.CreateTripI
 	return tripSummaryFromCreate(*res), nil
 }
 
-// UpdateTrip is the resolver for the updateTrip field.
 func (r *mutationResolver) UpdateTrip(ctx context.Context, id uuid.UUID, input gen.UpdateTripInput) (*gen.Trip, error) {
 	uid, err := CurrentUserID(ctx)
 	if err != nil {
@@ -270,7 +251,6 @@ func (r *mutationResolver) UpdateTrip(ctx context.Context, id uuid.UUID, input g
 	if err := r.UpdateTripUC.Execute(ctx, req); err != nil {
 		return nil, err
 	}
-	// Подтянем актуальный Trip
 	trip, err := r.GetTripUC.Execute(ctx, requests.GetTripRequest{
 		TripID: domain.TripID(id),
 		UserID: domain.UserID(uid),
@@ -281,7 +261,6 @@ func (r *mutationResolver) UpdateTrip(ctx context.Context, id uuid.UUID, input g
 	return tripFromDetail(*trip), nil
 }
 
-// DeleteTrip is the resolver for the deleteTrip field.
 func (r *mutationResolver) DeleteTrip(ctx context.Context, id uuid.UUID) (*gen.OperationResult, error) {
 	if err := r.DeleteTripUC.Execute(ctx, requests.DeleteTripRequest{TripID: domain.TripID(id)}); err != nil {
 		return &gen.OperationResult{
@@ -292,7 +271,6 @@ func (r *mutationResolver) DeleteTrip(ctx context.Context, id uuid.UUID) (*gen.O
 	return &gen.OperationResult{Success: true}, nil
 }
 
-// AddPlaceToTrip is the resolver for the addPlaceToTrip field.
 func (r *mutationResolver) AddPlaceToTrip(ctx context.Context, tripID uuid.UUID, input gen.AddPlaceToTripInput) (*gen.TripPlace, error) {
 	uid, err := CurrentUserID(ctx)
 	if err != nil {
@@ -319,7 +297,6 @@ func (r *mutationResolver) AddPlaceToTrip(ctx context.Context, tripID uuid.UUID,
 	}, nil
 }
 
-// RemovePlaceFromTrip is the resolver for the removePlaceFromTrip field.
 func (r *mutationResolver) RemovePlaceFromTrip(ctx context.Context, tripID uuid.UUID, placeID uuid.UUID) (*gen.OperationResult, error) {
 	uid, err := CurrentUserID(ctx)
 	if err != nil {
@@ -339,7 +316,6 @@ func (r *mutationResolver) RemovePlaceFromTrip(ctx context.Context, tripID uuid.
 	return &gen.OperationResult{Success: true}, nil
 }
 
-// CreateReview is the resolver for the createReview field.
 func (r *mutationResolver) CreateReview(ctx context.Context, input gen.CreateReviewInput) (*gen.Review, error) {
 	uid, err := CurrentUserID(ctx)
 	if err != nil {
@@ -359,7 +335,6 @@ func (r *mutationResolver) CreateReview(ctx context.Context, input gen.CreateRev
 	return reviewFromCreateResponse(*res), nil
 }
 
-// DeleteReview is the resolver for the deleteReview field.
 func (r *mutationResolver) DeleteReview(ctx context.Context, id uuid.UUID) (*gen.OperationResult, error) {
 	uid, err := CurrentUserID(ctx)
 	if err != nil {
@@ -380,7 +355,6 @@ func (r *mutationResolver) DeleteReview(ctx context.Context, id uuid.UUID) (*gen
 	return &gen.OperationResult{Success: res.Success}, nil
 }
 
-// AddFavourite is the resolver for the addFavourite field.
 func (r *mutationResolver) AddFavourite(ctx context.Context, placeID uuid.UUID) (*gen.OperationResult, error) {
 	uid, err := CurrentUserID(ctx)
 	if err != nil {
@@ -398,7 +372,6 @@ func (r *mutationResolver) AddFavourite(ctx context.Context, placeID uuid.UUID) 
 	return &gen.OperationResult{Success: true}, nil
 }
 
-// RemoveFavourite is the resolver for the removeFavourite field.
 func (r *mutationResolver) RemoveFavourite(ctx context.Context, placeID uuid.UUID) (*gen.OperationResult, error) {
 	uid, err := CurrentUserID(ctx)
 	if err != nil {
@@ -416,9 +389,7 @@ func (r *mutationResolver) RemoveFavourite(ctx context.Context, placeID uuid.UUI
 	return &gen.OperationResult{Success: true}, nil
 }
 
-// GenerateReport is the resolver for the generateReport field.
 func (r *mutationResolver) GenerateReport(ctx context.Context, input gen.GenerateReportInput) (*gen.Report, error) {
-	// Синхронно выполняем UC и возвращаем готовый Report.
 	req := requests.GenerateReportRequest{
 		ReportType: string(input.ReportType),
 		Format:     domain.ReportFormat(strings.ToLower(string(input.Format))),
@@ -438,7 +409,6 @@ func (r *mutationResolver) GenerateReport(ctx context.Context, input gen.Generat
 	if _, err := r.GenerateReportUC.Execute(ctx, req); err != nil {
 		return nil, err
 	}
-	// Заглушка: возвращаем готовый отчёт.
 	now := time.Now()
 	return &gen.Report{
 		ID:          uuid.New(),
@@ -451,11 +421,6 @@ func (r *mutationResolver) GenerateReport(ctx context.Context, input gen.Generat
 	}, nil
 }
 
-// =========================================================
-//                        QUERY
-// =========================================================
-
-// Me is the resolver for the me field.
 func (r *queryResolver) Me(ctx context.Context) (*gen.User, error) {
 	uid, err := CurrentUserID(ctx)
 	if err != nil {
@@ -468,7 +433,6 @@ func (r *queryResolver) Me(ctx context.Context) (*gen.User, error) {
 	return userFromProfile(profile), nil
 }
 
-// Countries is the resolver for the countries field.
 func (r *queryResolver) Countries(ctx context.Context, search *string, pagination *gen.PaginationInput) ([]*gen.Country, error) {
 	limit, offset := paginationOrDefault(pagination)
 	items, err := r.GetCountriesUC.Execute(ctx, requests.GetCountriesRequest{
@@ -486,7 +450,6 @@ func (r *queryResolver) Countries(ctx context.Context, search *string, paginatio
 	return out, nil
 }
 
-// Country is the resolver for the country field.
 func (r *queryResolver) Country(ctx context.Context, id uuid.UUID) (*gen.CountryDetails, error) {
 	c, err := r.GetCountryUC.Execute(ctx, requests.GetCountryRequest{ID: domain.CountryID(id)})
 	if err != nil {
@@ -495,7 +458,6 @@ func (r *queryResolver) Country(ctx context.Context, id uuid.UUID) (*gen.Country
 	return countryDetail(*c), nil
 }
 
-// CitiesByCountry is the resolver for the citiesByCountry field.
 func (r *queryResolver) CitiesByCountry(ctx context.Context, countryID uuid.UUID, pagination *gen.PaginationInput) ([]*gen.City, error) {
 	limit, offset := paginationOrDefault(pagination)
 	items, err := r.GetCitiesUC.Execute(ctx, requests.GetCitiesByCountryRequest{
@@ -513,7 +475,6 @@ func (r *queryResolver) CitiesByCountry(ctx context.Context, countryID uuid.UUID
 	return out, nil
 }
 
-// City is the resolver for the city field.
 func (r *queryResolver) City(ctx context.Context, id uuid.UUID) (*gen.CityDetails, error) {
 	c, err := r.GetCityUC.Execute(ctx, requests.GetCityRequest{ID: domain.CityID(id)})
 	if err != nil {
@@ -522,7 +483,6 @@ func (r *queryResolver) City(ctx context.Context, id uuid.UUID) (*gen.CityDetail
 	return cityDetail(*c), nil
 }
 
-// Cities is the resolver for the cities field.
 func (r *queryResolver) Cities(ctx context.Context, search *string, pagination *gen.PaginationInput) ([]*gen.City, error) {
 	limit, offset := paginationOrDefault(pagination)
 	items, err := r.SearchCitiesUC.Execute(ctx, requests.SearchCitiesRequest{
@@ -540,7 +500,6 @@ func (r *queryResolver) Cities(ctx context.Context, search *string, pagination *
 	return out, nil
 }
 
-// DistrictsByCity is the resolver for the districtsByCity field.
 func (r *queryResolver) DistrictsByCity(ctx context.Context, cityID uuid.UUID, pagination *gen.PaginationInput) ([]*gen.District, error) {
 	limit, offset := paginationOrDefault(pagination)
 	items, err := r.GetDistrictsUC.Execute(ctx, requests.GetDistrictsByCityRequest{
@@ -558,7 +517,6 @@ func (r *queryResolver) DistrictsByCity(ctx context.Context, cityID uuid.UUID, p
 	return out, nil
 }
 
-// TransportsByCity is the resolver for the transportsByCity field.
 func (r *queryResolver) TransportsByCity(ctx context.Context, cityID uuid.UUID, pagination *gen.PaginationInput) ([]*gen.TransportNode, error) {
 	limit, offset := paginationOrDefault(pagination)
 	items, err := r.GetTransportNodesUC.Execute(ctx, requests.GetTransportNodesByCityRequest{
@@ -576,7 +534,6 @@ func (r *queryResolver) TransportsByCity(ctx context.Context, cityID uuid.UUID, 
 	return out, nil
 }
 
-// PlacesByCity is the resolver for the placesByCity field.
 func (r *queryResolver) PlacesByCity(ctx context.Context, cityID uuid.UUID, category *string, sortBy *gen.PlaceSortBy, pagination *gen.PaginationInput) ([]*gen.Place, error) {
 	limit, offset := paginationOrDefault(pagination)
 	sort := ""
@@ -596,7 +553,6 @@ func (r *queryResolver) PlacesByCity(ctx context.Context, cityID uuid.UUID, cate
 	return placesFromResponse(items), nil
 }
 
-// PlacesByCategory is the resolver for the placesByCategory field.
 func (r *queryResolver) PlacesByCategory(ctx context.Context, category string, pagination *gen.PaginationInput) ([]*gen.Place, error) {
 	limit, offset := paginationOrDefault(pagination)
 	items, err := r.GetPlacesByCategoryUC.Execute(ctx, requests.GetPlacesByCategoryRequest{
@@ -610,7 +566,6 @@ func (r *queryResolver) PlacesByCategory(ctx context.Context, category string, p
 	return placesFromResponse(items), nil
 }
 
-// Place is the resolver for the place field.
 func (r *queryResolver) Place(ctx context.Context, id uuid.UUID) (*gen.Place, error) {
 	p, err := r.GetPlaceUC.Execute(ctx, requests.GetPlaceRequest{ID: domain.PlaceID(id)})
 	if err != nil {
@@ -619,7 +574,6 @@ func (r *queryResolver) Place(ctx context.Context, id uuid.UUID) (*gen.Place, er
 	return placeFromSummary(*p), nil
 }
 
-// MyTrips is the resolver for the myTrips field.
 func (r *queryResolver) MyTrips(ctx context.Context) ([]*gen.TripSummary, error) {
 	uid, err := CurrentUserID(ctx)
 	if err != nil {
@@ -642,7 +596,6 @@ func (r *queryResolver) MyTrips(ctx context.Context) ([]*gen.TripSummary, error)
 	return out, nil
 }
 
-// Trip is the resolver for the trip field.
 func (r *queryResolver) Trip(ctx context.Context, id uuid.UUID) (*gen.Trip, error) {
 	uid, err := CurrentUserID(ctx)
 	if err != nil {
@@ -658,7 +611,6 @@ func (r *queryResolver) Trip(ctx context.Context, id uuid.UUID) (*gen.Trip, erro
 	return tripFromDetail(*t), nil
 }
 
-// HolidaysByDate is the resolver for the holidaysByDate field.
 func (r *queryResolver) HolidaysByDate(ctx context.Context, date time.Time) ([]*gen.Holiday, error) {
 	items, err := r.GetHolidaysUC.Execute(ctx, requests.GetHolidaysByDateRequest{Date: date})
 	if err != nil {
@@ -677,7 +629,6 @@ func (r *queryResolver) HolidaysByDate(ctx context.Context, date time.Time) ([]*
 	return out, nil
 }
 
-// File is the resolver for the file field.
 func (r *queryResolver) File(ctx context.Context, id uuid.UUID) (*gen.StaticPage, error) {
 	p, err := r.GetStaticPageUC.Execute(ctx, content.GetStaticPageByIDRequest{ID: domain.StaticPageID(id)})
 	if err != nil {
@@ -703,7 +654,6 @@ func (r *queryResolver) File(ctx context.Context, id uuid.UUID) (*gen.StaticPage
 	}, nil
 }
 
-// ReviewsByPlace is the resolver for the reviewsByPlace field.
 func (r *queryResolver) ReviewsByPlace(ctx context.Context, placeID uuid.UUID, onlyApproved *bool, pagination *gen.PaginationInput) ([]*gen.ReviewBrief, error) {
 	limit, offset := paginationOrDefault(pagination)
 	only := true
@@ -734,7 +684,6 @@ func (r *queryResolver) ReviewsByPlace(ctx context.Context, placeID uuid.UUID, o
 	return out, nil
 }
 
-// MyReviews is the resolver for the myReviews field.
 func (r *queryResolver) MyReviews(ctx context.Context, pagination *gen.PaginationInput) ([]*gen.Review, error) {
 	uid, err := CurrentUserID(ctx)
 	if err != nil {
@@ -766,7 +715,6 @@ func (r *queryResolver) MyReviews(ctx context.Context, pagination *gen.Paginatio
 	return out, nil
 }
 
-// ModerationUsers is the resolver for the moderationUsers field.
 func (r *queryResolver) ModerationUsers(ctx context.Context, search *string, pagination *gen.PaginationInput) ([]*gen.User, error) {
 	if !IsModerator(ctx) {
 		return nil, fmt.Errorf("forbidden")
@@ -796,7 +744,6 @@ func (r *queryResolver) ModerationUsers(ctx context.Context, search *string, pag
 	return out, nil
 }
 
-// ModerationPendingReviews is the resolver for the moderationPendingReviews field.
 func (r *queryResolver) ModerationPendingReviews(ctx context.Context, isApproved *bool, pagination *gen.PaginationInput) ([]*gen.ReviewBrief, error) {
 	if !IsModerator(ctx) {
 		return nil, fmt.Errorf("forbidden")
@@ -830,7 +777,6 @@ func (r *queryResolver) ModerationPendingReviews(ctx context.Context, isApproved
 	return out, nil
 }
 
-// Favourites is the resolver for the favourites field.
 func (r *queryResolver) Favourites(ctx context.Context, pagination *gen.PaginationInput) ([]*gen.Place, error) {
 	uid, err := CurrentUserID(ctx)
 	if err != nil {
@@ -871,17 +817,10 @@ func (r *queryResolver) Favourites(ctx context.Context, pagination *gen.Paginati
 	return out, nil
 }
 
-// Report is the resolver for the report field.
 func (r *queryResolver) Report(ctx context.Context, id uuid.UUID) (*gen.Report, error) {
-	// Асинхронные отчёты в этой итерации не хранятся — возвращаем stub.
 	return nil, fmt.Errorf("report %s not found", id)
 }
 
-// =========================================================
-//                     SUBSCRIPTION
-// =========================================================
-
-// ReportStatus is the resolver for the reportStatus field.
 func (r *subscriptionResolver) ReportStatus(ctx context.Context, reportID uuid.UUID) (<-chan *gen.Report, error) {
 	ch := make(chan *gen.Report)
 	now := time.Now()
@@ -898,17 +837,10 @@ func (r *subscriptionResolver) ReportStatus(ctx context.Context, reportID uuid.U
 	return ch, nil
 }
 
-// =========================================================
-//                 ResolverRoot impl
-// =========================================================
-
-// Mutation returns gen.MutationResolver implementation.
 func (r *Resolver) Mutation() gen.MutationResolver { return &mutationResolver{r} }
 
-// Query returns gen.QueryResolver implementation.
 func (r *Resolver) Query() gen.QueryResolver { return &queryResolver{r} }
 
-// Subscription returns gen.SubscriptionResolver implementation.
 func (r *Resolver) Subscription() gen.SubscriptionResolver { return &subscriptionResolver{r} }
 
 type (

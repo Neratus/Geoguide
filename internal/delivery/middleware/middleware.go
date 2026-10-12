@@ -60,15 +60,13 @@ func JWTAuthEcho(secret []byte) echo.MiddlewareFunc {
 
 			authHeader := req.Header.Get("Authorization")
 
-			// Нет токена:
 			if authHeader == "" {
 				if isPublic {
-					return next(c) // пропускаем анонимно
+					return next(c)
 				}
 				return echo.NewHTTPError(http.StatusUnauthorized, "missing authorization header")
 			}
 
-			// Токен есть — парсим всегда, даже на публичных путях.
 			parts := strings.Split(authHeader, " ")
 			if len(parts) != 2 || parts[0] != "Bearer" {
 				if isPublic {

@@ -228,10 +228,10 @@ sonar: sonar-check
 
 
 prism:
-	docker run --rm -v ${PWD}:/tmp -p 4010:4010 stoplight/prism:4 mock -h 0.0.0.0 /tmp/api/openapi.yaml
+	docker run --rm -v ${PWD}:/tmp -p 4010:4010 stoplight/prism:4 mock -h 0.0.0.0 /tmp/api/openapi/openapi.yaml
 
 yaml-lint:
-	docker run --rm -v ${PWD}:/tmp stoplight/spectral lint /tmp/api/openapi.yaml --ruleset /tmp/.spectral.yaml
+	docker run --rm --platform linux/amd64 -v ${PWD}:/tmp stoplight/spectral lint /tmp/api/openapi/openapi.yaml --ruleset /tmp/api/openapi/.spectral.yaml
 
 test-restore:
 	@$(SED_I) 's/primary_type: "cassandra"/primary_type: "postgres"/' $(CONFIG_FILE)

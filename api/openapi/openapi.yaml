@@ -336,8 +336,8 @@ components:
         phoneCode:
           {
             type: string,
-            maxLength: 10,
-            pattern: '^\+?\d{1,10}$',
+            maxLength: 15,
+            pattern: '^\+?\d{1,11}$',
             example: "+71111111111",
           }
         imageUrl:
@@ -376,8 +376,8 @@ components:
         phoneCode:
           {
             type: string,
-            maxLength: 10,
-            pattern: '^\+?\d{1,10}$',
+            maxLength: 15,
+            pattern: '^\+?\d{1,11}$',
             example: "+71111111111",
           }
         religion: { type: string, maxLength: 100, pattern: '^[^\x00-\x1F]*$' }

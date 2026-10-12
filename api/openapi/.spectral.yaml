@@ -1,0 +1,9 @@
+extends: ["spectral:oas"]
+rules:
+  info-contact: error
+  info-description: error
+  operation-operationId: error
+  operation-tags: error
+  path-keys-no-trailing-slash: error
+  path-not-include-query: error
+  oas3-valid-media-example: warn
