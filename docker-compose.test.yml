@@ -48,7 +48,7 @@ services:
     ports:
       - "8333:8333"
     volumes:
-      - ./seaweedfs-s3-config.json:/etc/seaweedfs/s3-config.json:ro
+      - ./config/seaweedfs/s3.json:/etc/seaweedfs/s3.json:ro
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:8333/"]
       interval: 5s
