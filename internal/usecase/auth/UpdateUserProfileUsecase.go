@@ -4,8 +4,8 @@ import (
 	"context"
 	"log/slog"
 
+	"github.com/Neratus/geoguide/internal/delivery/dto"
 	"github.com/Neratus/geoguide/internal/domain/interfaces"
-	"github.com/Neratus/geoguide/internal/domain/requests"
 	usecase_errors "github.com/Neratus/geoguide/internal/usecase"
 	"github.com/google/uuid"
 )
@@ -28,7 +28,7 @@ func NewUpdateUserProfileUseCase(
 	}
 }
 
-func (uc *UpdateUserProfileUseCase) Execute(ctx context.Context, req requests.UpdateUserProfileRequest) (*requests.UpdateUserProfileResponse, error) {
+func (uc *UpdateUserProfileUseCase) Execute(ctx context.Context, req dto.UpdateUserProfileRequest) (*dto.UpdateUserProfileResponse, error) {
 	uc.logger.Info("updating user profile", "token", req.Token)
 
 	var userID uuid.UUID
@@ -85,7 +85,7 @@ func (uc *UpdateUserProfileUseCase) Execute(ctx context.Context, req requests.Up
 
 	uc.logger.Info("user profile updated successfully", "user_id", userID)
 
-	return &requests.UpdateUserProfileResponse{
+	return &dto.UpdateUserProfileResponse{
 		ID:                 user.GetId(),
 		Username:           user.GetUsername(),
 		Email:              user.GetEmail(),

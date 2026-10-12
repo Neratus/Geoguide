@@ -4,8 +4,8 @@ import (
 	"context"
 	"log/slog"
 
+	"github.com/Neratus/geoguide/internal/delivery/dto"
 	"github.com/Neratus/geoguide/internal/domain/interfaces"
-	"github.com/Neratus/geoguide/internal/domain/requests"
 	usecase_errors "github.com/Neratus/geoguide/internal/usecase"
 )
 
@@ -32,7 +32,7 @@ func NewGenerateReportUseCase(
 		logger:    logger,
 	}
 }
-func (uc *GenerateReportUseCase) Execute(ctx context.Context, req requests.GenerateReportRequest) ([]byte, error) {
+func (uc *GenerateReportUseCase) Execute(ctx context.Context, req dto.GenerateReportRequest) ([]byte, error) {
 	uc.logger.Info("generating report", "type", req.ReportType, "format", req.Format, "limit", req.Limit)
 
 	switch req.ReportType {

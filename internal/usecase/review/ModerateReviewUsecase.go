@@ -4,9 +4,9 @@ import (
 	"context"
 	"log/slog"
 
+	"github.com/Neratus/geoguide/internal/delivery/dto"
 	"github.com/Neratus/geoguide/internal/domain"
 	"github.com/Neratus/geoguide/internal/domain/interfaces"
-	"github.com/Neratus/geoguide/internal/domain/requests"
 	usecase_errors "github.com/Neratus/geoguide/internal/usecase"
 )
 
@@ -34,7 +34,7 @@ func NewModerateReviewUseCase(
 	}
 }
 
-func (uc *ModerateReviewUseCase) Execute(ctx context.Context, req requests.ModerateReviewRequest) (*requests.ModerateReviewResponse, error) {
+func (uc *ModerateReviewUseCase) Execute(ctx context.Context, req dto.ModerateReviewRequest) (*dto.ModerateReviewResponse, error) {
 	uc.logger.Info("moderating review", "review_id", req.ReviewID, "approved", req.Approved)
 
 	review, err := uc.placeRepo.FindReviewByID(ctx, req.ReviewID)
@@ -81,7 +81,7 @@ func (uc *ModerateReviewUseCase) Execute(ctx context.Context, req requests.Moder
 		Comment:   req.Comment,
 	})
 
-	return &requests.ModerateReviewResponse{
+	return &dto.ModerateReviewResponse{
 		ID:                req.ReviewID,
 		IsApproved:        req.Approved,
 		IsModerated:       true,

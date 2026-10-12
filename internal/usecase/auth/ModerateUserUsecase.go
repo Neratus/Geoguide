@@ -4,9 +4,9 @@ import (
 	"context"
 	"log/slog"
 
+	"github.com/Neratus/geoguide/internal/delivery/dto"
 	"github.com/Neratus/geoguide/internal/domain"
 	"github.com/Neratus/geoguide/internal/domain/interfaces"
-	"github.com/Neratus/geoguide/internal/domain/requests"
 	usecase_errors "github.com/Neratus/geoguide/internal/usecase"
 )
 
@@ -31,7 +31,7 @@ func NewModerateUserUsecase(
 	}
 }
 
-func (uc *ModerateUserUsecase) Execute(ctx context.Context, req requests.ModerateUserRequest) (*requests.ModerateUserResponse, error) {
+func (uc *ModerateUserUsecase) Execute(ctx context.Context, req dto.ModerateUserRequest) (*dto.ModerateUserResponse, error) {
 	uc.logger.Info("moderating user", "user_id", req.UserID, "block", req.Block, "moderator_id", req.ModeratorID)
 
 	user, err := uc.userRepo.FindByID(ctx, req.UserID)
@@ -74,7 +74,7 @@ func (uc *ModerateUserUsecase) Execute(ctx context.Context, req requests.Moderat
 
 		user, _ = uc.userRepo.FindByID(ctx, req.UserID)
 
-		return &requests.ModerateUserResponse{
+		return &dto.ModerateUserResponse{
 			UserID:      user.GetId(),
 			IsBlocked:   true,
 			BlockedAt:   user.GetBlockedAt(),
@@ -105,7 +105,7 @@ func (uc *ModerateUserUsecase) Execute(ctx context.Context, req requests.Moderat
 
 	user, _ = uc.userRepo.FindByID(ctx, req.UserID)
 
-	return &requests.ModerateUserResponse{
+	return &dto.ModerateUserResponse{
 		UserID:      user.GetId(),
 		IsBlocked:   false,
 		BlockedAt:   nil,

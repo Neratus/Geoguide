@@ -4,8 +4,8 @@ import (
 	"context"
 	"log/slog"
 
+	"github.com/Neratus/geoguide/internal/delivery/dto"
 	"github.com/Neratus/geoguide/internal/domain/interfaces"
-	"github.com/Neratus/geoguide/internal/domain/requests"
 	usecase_errors "github.com/Neratus/geoguide/internal/usecase"
 )
 
@@ -18,7 +18,7 @@ func NewGetUsersUseCase(userRepo interfaces.UserRepository, logger *slog.Logger)
 	return &GetUsersUseCase{userRepo: userRepo, logger: logger}
 }
 
-func (uc *GetUsersUseCase) Execute(ctx context.Context, req requests.GetUsersRequest) (*requests.GetUsersResponse, error) {
+func (uc *GetUsersUseCase) Execute(ctx context.Context, req dto.GetUsersRequest) (*dto.GetUsersResponse, error) {
 	uc.logger.Info("getting users", "limit", req.Limit, "offset", req.Offset, "search", req.Search)
 
 	if !req.IsModerator {
@@ -31,5 +31,5 @@ func (uc *GetUsersUseCase) Execute(ctx context.Context, req requests.GetUsersReq
 		return nil, err
 	}
 
-	return &requests.GetUsersResponse{Users: users}, nil
+	return &dto.GetUsersResponse{Users: users}, nil
 }

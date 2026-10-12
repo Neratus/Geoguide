@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Neratus/geoguide/internal/delivery/dto"
 	"github.com/Neratus/geoguide/internal/domain"
-	"github.com/Neratus/geoguide/internal/domain/requests"
 	"github.com/Neratus/geoguide/internal/mocks"
 	usecase_errors "github.com/Neratus/geoguide/internal/usecase"
 	"github.com/google/uuid"
@@ -61,7 +61,7 @@ func TestCreateReviewUseCase(t *testing.T) {
 	placeRepo.Places[placeID] = place
 
 	t.Run("Success_CreateNewReview", func(t *testing.T) {
-		req := requests.CreateReviewRequest{
+		req := dto.CreateReviewRequest{
 			UserID:    userID,
 			PlaceID:   placeID,
 			Rating:    5,
@@ -82,7 +82,7 @@ func TestCreateReviewUseCase(t *testing.T) {
 	})
 
 	t.Run("Error_PlaceNotFound", func(t *testing.T) {
-		req := requests.CreateReviewRequest{
+		req := dto.CreateReviewRequest{
 			UserID:    userID,
 			PlaceID:   domain.PlaceID(uuid.New()),
 			Rating:    5,
@@ -101,7 +101,7 @@ func TestCreateReviewUseCase(t *testing.T) {
 		existingReview := createTestReview(domain.ReviewID(uuid.New()), 4, "Норм", time.Now(), userID, placeID)
 		placeRepo.Reviews[existingReview.GetId()] = existingReview
 
-		req := requests.CreateReviewRequest{
+		req := dto.CreateReviewRequest{
 			UserID:    userID,
 			PlaceID:   placeID,
 			Rating:    5,
@@ -136,7 +136,7 @@ func TestDeleteReviewUseCase(t *testing.T) {
 	placeRepo.Reviews[reviewID] = review
 
 	t.Run("Success_DeleteByAuthor", func(t *testing.T) {
-		req := requests.DeleteReviewRequest{
+		req := dto.DeleteReviewRequest{
 			ReviewID:    reviewID,
 			UserID:      authorID,
 			IsModerator: false,
@@ -155,7 +155,7 @@ func TestDeleteReviewUseCase(t *testing.T) {
 	t.Run("Success_DeleteByModerator", func(t *testing.T) {
 		placeRepo.Reviews[reviewID] = review
 
-		req := requests.DeleteReviewRequest{
+		req := dto.DeleteReviewRequest{
 			ReviewID:    reviewID,
 			UserID:      randomUserID,
 			IsModerator: true,
@@ -169,7 +169,7 @@ func TestDeleteReviewUseCase(t *testing.T) {
 	})
 
 	t.Run("Error_ReviewNotFound", func(t *testing.T) {
-		req := requests.DeleteReviewRequest{
+		req := dto.DeleteReviewRequest{
 			ReviewID:    domain.ReviewID(uuid.New()),
 			UserID:      authorID,
 			IsModerator: false,
@@ -185,7 +185,7 @@ func TestDeleteReviewUseCase(t *testing.T) {
 	t.Run("Error_NotAuthorized", func(t *testing.T) {
 		placeRepo.Reviews[reviewID] = review
 
-		req := requests.DeleteReviewRequest{
+		req := dto.DeleteReviewRequest{
 			ReviewID:    reviewID,
 			UserID:      randomUserID,
 			IsModerator: false,
@@ -229,7 +229,7 @@ func TestGetReviewsByPlaceUseCase(t *testing.T) {
 	_ = placeRepo.SaveReview(ctx, review2)
 
 	t.Run("Success_GetAllReviews", func(t *testing.T) {
-		req := requests.GetReviewsByPlaceRequest{
+		req := dto.GetReviewsByPlaceRequest{
 			PlaceID:      placeID,
 			OnlyApproved: false,
 		}
@@ -241,7 +241,7 @@ func TestGetReviewsByPlaceUseCase(t *testing.T) {
 	})
 
 	t.Run("Success_GetOnlyApprovedReviews", func(t *testing.T) {
-		req := requests.GetReviewsByPlaceRequest{
+		req := dto.GetReviewsByPlaceRequest{
 			PlaceID:      placeID,
 			OnlyApproved: true,
 		}
@@ -254,7 +254,7 @@ func TestGetReviewsByPlaceUseCase(t *testing.T) {
 	})
 
 	t.Run("Error_PlaceNotFound", func(t *testing.T) {
-		req := requests.GetReviewsByPlaceRequest{
+		req := dto.GetReviewsByPlaceRequest{
 			PlaceID:      domain.PlaceID(uuid.New()),
 			OnlyApproved: false,
 		}
@@ -292,7 +292,7 @@ func TestModerateReviewUseCase(t *testing.T) {
 	placeRepo.Reviews[reviewID] = review
 
 	t.Run("Success_ModerateAndApprove", func(t *testing.T) {
-		req := requests.ModerateReviewRequest{
+		req := dto.ModerateReviewRequest{
 			ReviewID: reviewID,
 			Approved: true,
 			Comment:  "Все отлично",
@@ -310,7 +310,7 @@ func TestModerateReviewUseCase(t *testing.T) {
 	})
 
 	t.Run("Error_ReviewNotFound", func(t *testing.T) {
-		req := requests.ModerateReviewRequest{
+		req := dto.ModerateReviewRequest{
 			ReviewID: domain.ReviewID(uuid.New()),
 			Approved: true,
 			Comment:  "Ок",
@@ -328,7 +328,7 @@ func TestModerateReviewUseCase(t *testing.T) {
 		alreadyModeratedReview.SetModerated(true)
 		placeRepo.Reviews[alreadyModeratedReview.GetId()] = alreadyModeratedReview
 
-		req := requests.ModerateReviewRequest{
+		req := dto.ModerateReviewRequest{
 			ReviewID: alreadyModeratedReview.GetId(),
 			Approved: false,
 			Comment:  "Повторная модерация",

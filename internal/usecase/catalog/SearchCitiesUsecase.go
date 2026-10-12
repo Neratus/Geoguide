@@ -4,8 +4,8 @@ import (
 	"context"
 	"log/slog"
 
+	"github.com/Neratus/geoguide/internal/delivery/dto"
 	"github.com/Neratus/geoguide/internal/domain/interfaces"
-	"github.com/Neratus/geoguide/internal/domain/requests"
 )
 
 type SearchCitiesUseCase struct {
@@ -23,7 +23,7 @@ func NewSearchCitiesUseCase(
 	}
 }
 
-func (uc *SearchCitiesUseCase) Execute(ctx context.Context, req requests.SearchCitiesRequest) ([]requests.CityResponse, error) {
+func (uc *SearchCitiesUseCase) Execute(ctx context.Context, req dto.SearchCitiesRequest) ([]dto.CityResponse, error) {
 	uc.logger.Info("searching cities", "query", req.Query, "limit", req.Limit, "offset", req.Offset)
 
 	cities, err := uc.cityRepo.SearchCities(ctx, req.Query, req.Limit, req.Offset)
@@ -32,11 +32,11 @@ func (uc *SearchCitiesUseCase) Execute(ctx context.Context, req requests.SearchC
 		return nil, err
 	}
 
-	response := make([]requests.CityResponse, 0, len(cities))
+	response := make([]dto.CityResponse, 0, len(cities))
 	for _, city := range cities {
 		coords := city.GetCoordinates()
 		coordStr := coords.String()
-		response = append(response, requests.CityResponse{
+		response = append(response, dto.CityResponse{
 			ID:          city.GetId(),
 			Name:        city.GetName(),
 			Population:  city.GetPopulation(),

@@ -19,10 +19,10 @@ import (
 	"time"
 
 	"github.com/Neratus/geoguide/internal/delivery"
+	"github.com/Neratus/geoguide/internal/delivery/dto"
 	"github.com/Neratus/geoguide/internal/delivery/graphql/resolvers"
 	"github.com/Neratus/geoguide/internal/domain"
 	"github.com/Neratus/geoguide/internal/domain/interfaces"
-	"github.com/Neratus/geoguide/internal/domain/requests"
 	"github.com/Neratus/geoguide/internal/infra/email"
 	"github.com/Neratus/geoguide/internal/infra/queue"
 	"github.com/Neratus/geoguide/internal/infra/report"
@@ -1122,7 +1122,7 @@ func (c *CLI) cmdRegister(args []string) {
 		fmt.Println("Usage: register <username> <email> <password> <phone>")
 		return
 	}
-	req := requests.RegisterUserRequest{
+	req := dto.RegisterUserRequest{
 		Username: args[0],
 		Email:    args[1],
 		Password: args[2],
@@ -1141,7 +1141,7 @@ func (c *CLI) cmdLogin(args []string) {
 		fmt.Println("Usage: login <username> <password>")
 		return
 	}
-	req := requests.LoginUserRequest{Username: args[0], Password: args[1]}
+	req := dto.LoginUserRequest{Username: args[0], Password: args[1]}
 	resp, err := c.LoginUC.Execute(c.ctx, req, "", "")
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
@@ -1164,7 +1164,7 @@ func (c *CLI) cmdVerify(args []string) {
 		fmt.Printf("Invalid user_id: %v\n", err)
 		return
 	}
-	req := requests.VerifyContactRequest{
+	req := dto.VerifyContactRequest{
 		UserID:  domain.UserID(userID),
 		Contact: args[1],
 		Code:    args[2],
@@ -1186,7 +1186,7 @@ func (c *CLI) cmdProfile(args []string) {
 		fmt.Printf("Invalid user_id: %v\n", err)
 		return
 	}
-	resp, err := c.GetProfileUC.Execute(c.ctx, requests.GetUserProfileRequest{UserID: domain.UserID(userID)})
+	resp, err := c.GetProfileUC.Execute(c.ctx, dto.GetUserProfileRequest{UserID: domain.UserID(userID)})
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 		return
@@ -1202,7 +1202,7 @@ func (c *CLI) cmdUpdateProfile(args []string) {
 		fmt.Println("Fields: username, phone, country, avatar_url, birth_date, categories (comma-sep)")
 		return
 	}
-	req := requests.UpdateUserProfileRequest{Token: args[0]}
+	req := dto.UpdateUserProfileRequest{Token: args[0]}
 	for _, kv := range args[1:] {
 		parts := strings.SplitN(kv, "=", 2)
 		if len(parts) != 2 {
@@ -1280,7 +1280,7 @@ func (c *CLI) cmdLogout(args []string) {
 		fmt.Println("Usage: logout <token>")
 		return
 	}
-	resp, err := c.LogoutUC.Execute(c.ctx, requests.LogoutRequest{Token: args[0]})
+	resp, err := c.LogoutUC.Execute(c.ctx, dto.LogoutRequest{Token: args[0]})
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 		return
@@ -1308,7 +1308,7 @@ func (c *CLI) cmdModerateUser(args []string) {
 		fmt.Printf("Invalid moderator_id: %v\n", err)
 		return
 	}
-	req := requests.ModerateUserRequest{
+	req := dto.ModerateUserRequest{
 		UserID:      domain.UserID(userID),
 		Block:       block,
 		Reason:      args[2],
@@ -1356,7 +1356,7 @@ func (c *CLI) cmdEnable2FA(args []string) {
 			fmt.Printf("Invalid user_id: %v\n", err)
 			return
 		}
-		codes, err := c.Enable2FAUC.VerifyAndEnable(c.ctx, requests.EnableTwoFactorRequest{
+		codes, err := c.Enable2FAUC.VerifyAndEnable(c.ctx, dto.EnableTwoFactorRequest{
 			UserID: domain.UserID(userID),
 			Secret: args[2],
 			Code:   args[3],
@@ -1379,7 +1379,7 @@ func (c *CLI) cmdVerify2FA(args []string) {
 		fmt.Println("Usage: verify_2fa <challenge_id> <code>")
 		return
 	}
-	token, err := c.Verify2FAUC.Execute(c.ctx, requests.VerifyTwoFactorRequest{
+	token, err := c.Verify2FAUC.Execute(c.ctx, dto.VerifyTwoFactorRequest{
 		ChallengeID: args[0],
 		Code:        args[1],
 	})
@@ -1402,7 +1402,7 @@ func (c *CLI) cmdCountries(args []string) {
 			offset = n
 		}
 	}
-	resp, err := c.GetCountriesUC.Execute(c.ctx, requests.GetCountriesRequest{Limit: limit, Offset: offset})
+	resp, err := c.GetCountriesUC.Execute(c.ctx, dto.GetCountriesRequest{Limit: limit, Offset: offset})
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 		return
@@ -1424,7 +1424,7 @@ func (c *CLI) cmdCountry(args []string) {
 		fmt.Printf("Invalid ID: %v\n", err)
 		return
 	}
-	resp, err := c.GetCountryUC.Execute(c.ctx, requests.GetCountryRequest{ID: domain.CountryID(id)})
+	resp, err := c.GetCountryUC.Execute(c.ctx, dto.GetCountryRequest{ID: domain.CountryID(id)})
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 		return
@@ -1459,7 +1459,7 @@ func (c *CLI) cmdCities(args []string) {
 			offset = n
 		}
 	}
-	resp, err := c.GetCitiesUC.Execute(c.ctx, requests.GetCitiesByCountryRequest{
+	resp, err := c.GetCitiesUC.Execute(c.ctx, dto.GetCitiesByCountryRequest{
 		CountryID: domain.CountryID(countryID), Limit: limit, Offset: offset,
 	})
 	if err != nil {
@@ -1483,7 +1483,7 @@ func (c *CLI) cmdCity(args []string) {
 		fmt.Printf("Invalid ID: %v\n", err)
 		return
 	}
-	resp, err := c.GetCityUC.Execute(c.ctx, requests.GetCityRequest{ID: domain.CityID(id)})
+	resp, err := c.GetCityUC.Execute(c.ctx, dto.GetCityRequest{ID: domain.CityID(id)})
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 		return
@@ -1510,7 +1510,7 @@ func (c *CLI) cmdSearchCities(args []string) {
 			offset = n
 		}
 	}
-	resp, err := c.SearchCitiesUC.Execute(c.ctx, requests.SearchCitiesRequest{Query: args[0], Limit: limit, Offset: offset})
+	resp, err := c.SearchCitiesUC.Execute(c.ctx, dto.SearchCitiesRequest{Query: args[0], Limit: limit, Offset: offset})
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 		return
@@ -1542,7 +1542,7 @@ func (c *CLI) cmdDistricts(args []string) {
 			offset = n
 		}
 	}
-	resp, err := c.GetDistrictsUC.Execute(c.ctx, requests.GetDistrictsByCityRequest{
+	resp, err := c.GetDistrictsUC.Execute(c.ctx, dto.GetDistrictsByCityRequest{
 		CityID: domain.CityID(cityID), Limit: limit, Offset: offset,
 	})
 	if err != nil {
@@ -1576,7 +1576,7 @@ func (c *CLI) cmdTransportNodes(args []string) {
 			offset = n
 		}
 	}
-	resp, err := c.GetTransportNodesUC.Execute(c.ctx, requests.GetTransportNodesByCityRequest{
+	resp, err := c.GetTransportNodesUC.Execute(c.ctx, dto.GetTransportNodesByCityRequest{
 		CityID: domain.CityID(cityID), Limit: limit, Offset: offset,
 	})
 	if err != nil {
@@ -1599,7 +1599,7 @@ func (c *CLI) cmdPlace(args []string) {
 		fmt.Printf("Invalid ID: %v\n", err)
 		return
 	}
-	resp, err := c.GetPlaceUC.Execute(c.ctx, requests.GetPlaceRequest{ID: domain.PlaceID(id)})
+	resp, err := c.GetPlaceUC.Execute(c.ctx, dto.GetPlaceRequest{ID: domain.PlaceID(id)})
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 		return
@@ -1624,7 +1624,7 @@ func (c *CLI) cmdPlacesByCity(args []string) {
 		fmt.Printf("Invalid ID: %v\n", err)
 		return
 	}
-	req := requests.GetPlacesByCityRequest{
+	req := dto.GetPlacesByCityRequest{
 		CityID: domain.CityID(cityID),
 		Limit:  100,
 	}
@@ -1671,7 +1671,7 @@ func (c *CLI) cmdPlacesByCategory(args []string) {
 			offset = n
 		}
 	}
-	resp, err := c.GetPlacesByCategoryUC.Execute(c.ctx, requests.GetPlacesByCategoryRequest{
+	resp, err := c.GetPlacesByCategoryUC.Execute(c.ctx, dto.GetPlacesByCategoryRequest{
 		Category: args[0], Limit: limit, Offset: offset,
 	})
 	if err != nil {
@@ -1694,7 +1694,7 @@ func (c *CLI) cmdHolidays(args []string) {
 		fmt.Printf("Invalid date: %v\n", err)
 		return
 	}
-	resp, err := c.GetHolidaysUC.Execute(c.ctx, requests.GetHolidaysByDateRequest{Date: date})
+	resp, err := c.GetHolidaysUC.Execute(c.ctx, dto.GetHolidaysByDateRequest{Date: date})
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 		return
@@ -1730,7 +1730,7 @@ func (c *CLI) cmdCreateTrip(args []string) {
 		fmt.Printf("Invalid user_id: %v\n", err)
 		return
 	}
-	req := requests.CreateTripRequest{
+	req := dto.CreateTripRequest{
 		Title:     args[0],
 		StartDate: startDate,
 		EndDate:   endDate,
@@ -1764,7 +1764,7 @@ func (c *CLI) cmdGetTrip(args []string) {
 		fmt.Printf("Invalid user_id: %v\n", err)
 		return
 	}
-	resp, err := c.GetTripUC.Execute(c.ctx, requests.GetTripRequest{
+	resp, err := c.GetTripUC.Execute(c.ctx, dto.GetTripRequest{
 		TripID: domain.TripID(tripID),
 		UserID: domain.UserID(userID),
 	})
@@ -1790,7 +1790,7 @@ func (c *CLI) cmdUserTrips(args []string) {
 		fmt.Printf("Invalid user_id: %v\n", err)
 		return
 	}
-	resp, err := c.GetUserTripsUC.Execute(c.ctx, requests.GetUserTripsRequest{UserID: domain.UserID(userID)})
+	resp, err := c.GetUserTripsUC.Execute(c.ctx, dto.GetUserTripsRequest{UserID: domain.UserID(userID)})
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 		return
@@ -1830,7 +1830,7 @@ func (c *CLI) cmdAddPlaceToTrip(args []string) {
 		fmt.Printf("Invalid user_id: %v\n", err)
 		return
 	}
-	req := requests.AddPlaceToTripRequest{
+	req := dto.AddPlaceToTripRequest{
 		TripID:      domain.TripID(tripID),
 		PlaceID:     domain.PlaceID(placeID),
 		DayNumber:   day,
@@ -1872,7 +1872,7 @@ func (c *CLI) cmdRemovePlaceFromTrip(args []string) {
 		fmt.Printf("Invalid user_id: %v\n", err)
 		return
 	}
-	req := requests.RemovePlaceFromTripRequest{
+	req := dto.RemovePlaceFromTripRequest{
 		TripID:  domain.TripID(tripID),
 		PlaceID: domain.PlaceID(placeID),
 		UserID:  domain.UserID(userID),
@@ -1899,7 +1899,7 @@ func (c *CLI) cmdUpdateTrip(args []string) {
 		fmt.Printf("Invalid user_id: %v\n", err)
 		return
 	}
-	req := requests.UpdateTripRequest{
+	req := dto.UpdateTripRequest{
 		TripID: domain.TripID(tripID),
 		UserID: domain.UserID(userID),
 	}
@@ -1944,7 +1944,7 @@ func (c *CLI) cmdDeleteTrip(args []string) {
 		fmt.Printf("Invalid trip_id: %v\n", err)
 		return
 	}
-	if err := c.DeleteTripUC.Execute(c.ctx, requests.DeleteTripRequest{TripID: domain.TripID(id)}); err != nil {
+	if err := c.DeleteTripUC.Execute(c.ctx, dto.DeleteTripRequest{TripID: domain.TripID(id)}); err != nil {
 		fmt.Printf("Error: %v\n", err)
 		return
 	}
@@ -1976,7 +1976,7 @@ func (c *CLI) cmdCreateReview(args []string) {
 		fmt.Printf("Invalid visit_date: %v\n", err)
 		return
 	}
-	req := requests.CreateReviewRequest{
+	req := dto.CreateReviewRequest{
 		UserID:    domain.UserID(userID),
 		PlaceID:   domain.PlaceID(placeID),
 		Rating:    rating,
@@ -2022,7 +2022,7 @@ func (c *CLI) cmdReviewsByPlace(args []string) {
 			offset = n
 		}
 	}
-	resp, err := c.GetReviewsByPlaceUC.Execute(c.ctx, requests.GetReviewsByPlaceRequest{
+	resp, err := c.GetReviewsByPlaceUC.Execute(c.ctx, dto.GetReviewsByPlaceRequest{
 		PlaceID: domain.PlaceID(placeID), OnlyApproved: onlyApproved, Limit: limit, Offset: offset,
 	})
 	if err != nil {
@@ -2056,7 +2056,7 @@ func (c *CLI) cmdUserReviews(args []string) {
 			offset = n
 		}
 	}
-	resp, err := c.GetUserReviewsUC.Execute(c.ctx, requests.GetUserReviewsRequest{
+	resp, err := c.GetUserReviewsUC.Execute(c.ctx, dto.GetUserReviewsRequest{
 		UserID: domain.UserID(userID), Limit: limit, Offset: offset,
 	})
 	if err != nil {
@@ -2089,7 +2089,7 @@ func (c *CLI) cmdModerateReview(args []string) {
 		fmt.Printf("Invalid moderator_id: %v\n", err)
 		return
 	}
-	resp, err := c.ModerateReviewUC.Execute(c.ctx, requests.ModerateReviewRequest{
+	resp, err := c.ModerateReviewUC.Execute(c.ctx, dto.ModerateReviewRequest{
 		ReviewID:    domain.ReviewID(reviewID),
 		Approved:    approved,
 		Comment:     args[2],
@@ -2123,7 +2123,7 @@ func (c *CLI) cmdDeleteReview(args []string) {
 		fmt.Println("Third arg must be true|false")
 		return
 	}
-	resp, err := c.DeleteReviewUC.Execute(c.ctx, requests.DeleteReviewRequest{
+	resp, err := c.DeleteReviewUC.Execute(c.ctx, dto.DeleteReviewRequest{
 		ReviewID:    domain.ReviewID(reviewID),
 		UserID:      domain.UserID(userID),
 		IsModerator: isModerator,
@@ -2147,7 +2147,7 @@ func (c *CLI) cmdPendingReviews(args []string) {
 			offset = n
 		}
 	}
-	resp, err := c.GetPendingReviewsUC.Execute(c.ctx, requests.GetPendingReviewsRequest{
+	resp, err := c.GetPendingReviewsUC.Execute(c.ctx, dto.GetPendingReviewsRequest{
 		Limit:       limit,
 		Offset:      offset,
 		IsModerator: true,
@@ -2284,7 +2284,7 @@ func (c *CLI) cmdUsers(args []string) {
 	if len(args) >= 3 {
 		search = args[2]
 	}
-	resp, err := c.GetUsersUC.Execute(c.ctx, requests.GetUsersRequest{
+	resp, err := c.GetUsersUC.Execute(c.ctx, dto.GetUsersRequest{
 		Limit: limit, Offset: offset, Search: search, IsModerator: true,
 	})
 	if err != nil {
@@ -2303,7 +2303,7 @@ func (c *CLI) cmdReport(args []string) {
 		fmt.Println("  report_type: places | users | trips")
 		return
 	}
-	req := requests.GenerateReportRequest{
+	req := dto.GenerateReportRequest{
 		ReportType: args[0],
 		Format:     domain.ReportFormat(args[1]),
 		Options: domain.ReportOptions{

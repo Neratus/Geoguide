@@ -4,8 +4,8 @@ import (
 	"context"
 	"log/slog"
 
+	"github.com/Neratus/geoguide/internal/delivery/dto"
 	"github.com/Neratus/geoguide/internal/domain/interfaces"
-	"github.com/Neratus/geoguide/internal/domain/requests"
 	usecase_errors "github.com/Neratus/geoguide/internal/usecase"
 )
 
@@ -24,7 +24,7 @@ func NewGetHolidaysByCountryUseCase(
 	}
 }
 
-func (uc *GetHolidaysByCountryUseCase) Execute(ctx context.Context, req requests.GetHolidaysByCountryRequest) ([]requests.HolidaySearchResponse, error) {
+func (uc *GetHolidaysByCountryUseCase) Execute(ctx context.Context, req dto.GetHolidaysByCountryRequest) ([]dto.HolidaySearchResponse, error) {
 	uc.logger.Info("getting holidays by country", "country_id", req.CountryID)
 
 	_, err := uc.countryRepo.FindByID(ctx, req.CountryID)
@@ -39,9 +39,9 @@ func (uc *GetHolidaysByCountryUseCase) Execute(ctx context.Context, req requests
 		return nil, err
 	}
 
-	response := make([]requests.HolidaySearchResponse, 0, len(holidays))
+	response := make([]dto.HolidaySearchResponse, 0, len(holidays))
 	for _, h := range holidays {
-		response = append(response, requests.HolidaySearchResponse{
+		response = append(response, dto.HolidaySearchResponse{
 			ID:          h.GetId(),
 			Name:        h.GetName(),
 			Date:        h.GetDate(),

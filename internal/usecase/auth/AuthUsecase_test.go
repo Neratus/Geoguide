@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Neratus/geoguide/internal/delivery/dto"
 	"github.com/Neratus/geoguide/internal/domain"
 	"github.com/Neratus/geoguide/internal/domain/interfaces"
-	"github.com/Neratus/geoguide/internal/domain/requests"
 	postgreSQL "github.com/Neratus/geoguide/internal/repository/postgres/sqlc"
 	user_repo "github.com/Neratus/geoguide/internal/repository/user"
 	usecase_errors "github.com/Neratus/geoguide/internal/usecase"
@@ -88,36 +88,36 @@ func (q *taskQueueSpy) Subscribe(taskName string, handler interfaces.TaskHandler
 func (q *taskQueueSpy) Run(ctx context.Context) error                                   { return nil }
 func (q *taskQueueSpy) Close() error                                                    { return nil }
 
-func defaultRegisterRequest() requests.RegisterUserRequest {
-	return requests.RegisterUserRequest{
+func defaultRegisterRequest() dto.RegisterUserRequest {
+	return dto.RegisterUserRequest{
 		Username: "newuser",
 		Email:    "new@example.com",
 		Password: "StrongPass123!",
 	}
 }
 
-func defaultVerifyContactRequest(userID domain.UserID) requests.VerifyContactRequest {
-	return requests.VerifyContactRequest{
+func defaultVerifyContactRequest(userID domain.UserID) dto.VerifyContactRequest {
+	return dto.VerifyContactRequest{
 		UserID:  userID,
 		Contact: "test@example.com",
 		Code:    "123456",
 	}
 }
 
-func defaultGetProfileRequest(userID domain.UserID) requests.GetUserProfileRequest {
-	return requests.GetUserProfileRequest{UserID: userID}
+func defaultGetProfileRequest(userID domain.UserID) dto.GetUserProfileRequest {
+	return dto.GetUserProfileRequest{UserID: userID}
 }
 
-func defaultUpdateProfileRequest(token string) requests.UpdateUserProfileRequest {
+func defaultUpdateProfileRequest(token string) dto.UpdateUserProfileRequest {
 	username := "updated_user"
-	return requests.UpdateUserProfileRequest{
+	return dto.UpdateUserProfileRequest{
 		Token:    token,
 		Username: &username,
 	}
 }
 
-func defaultLogoutRequest(token string) requests.LogoutRequest {
-	return requests.LogoutRequest{Token: token}
+func defaultLogoutRequest(token string) dto.LogoutRequest {
+	return dto.LogoutRequest{Token: token}
 }
 
 func defaultMockUserRow(userID uuid.UUID) *pgxmock.Rows {

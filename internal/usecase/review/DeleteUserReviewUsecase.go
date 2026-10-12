@@ -4,9 +4,9 @@ import (
 	"context"
 	"log/slog"
 
+	"github.com/Neratus/geoguide/internal/delivery/dto"
 	"github.com/Neratus/geoguide/internal/domain"
 	"github.com/Neratus/geoguide/internal/domain/interfaces"
-	"github.com/Neratus/geoguide/internal/domain/requests"
 	usecase_errors "github.com/Neratus/geoguide/internal/usecase"
 )
 
@@ -25,7 +25,7 @@ func NewDeleteReviewUseCase(
 	}
 }
 
-func (uc *DeleteReviewUseCase) Execute(ctx context.Context, req requests.DeleteReviewRequest) (*requests.DeleteReviewResponse, error) {
+func (uc *DeleteReviewUseCase) Execute(ctx context.Context, req dto.DeleteReviewRequest) (*dto.DeleteReviewResponse, error) {
 	uc.logger.Info("deleting review", "review_id", req.ReviewID)
 
 	review, err := uc.placeRepo.FindReviewByID(ctx, req.ReviewID)
@@ -45,5 +45,5 @@ func (uc *DeleteReviewUseCase) Execute(ctx context.Context, req requests.DeleteR
 			uc.logger.Warn("failed to update place rating after deletion", "error", err)
 		}
 	}
-	return &requests.DeleteReviewResponse{Success: true}, nil
+	return &dto.DeleteReviewResponse{Success: true}, nil
 }

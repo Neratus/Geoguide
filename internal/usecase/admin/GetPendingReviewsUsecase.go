@@ -4,8 +4,8 @@ import (
 	"context"
 	"log/slog"
 
+	"github.com/Neratus/geoguide/internal/delivery/dto"
 	"github.com/Neratus/geoguide/internal/domain/interfaces"
-	"github.com/Neratus/geoguide/internal/domain/requests"
 	usecase_errors "github.com/Neratus/geoguide/internal/usecase"
 )
 
@@ -18,7 +18,7 @@ func NewGetPendingReviewsUseCase(placeRepo interfaces.PlaceRepository, logger *s
 	return &GetPendingReviewsUseCase{placeRepo: placeRepo, logger: logger}
 }
 
-func (uc *GetPendingReviewsUseCase) Execute(ctx context.Context, req requests.GetPendingReviewsRequest) (*requests.GetPendingReviewsResponse, error) {
+func (uc *GetPendingReviewsUseCase) Execute(ctx context.Context, req dto.GetPendingReviewsRequest) (*dto.GetPendingReviewsResponse, error) {
 	uc.logger.Info("getting pending reviews", "limit", req.Limit, "offset", req.Offset)
 
 	if !req.IsModerator {
@@ -31,5 +31,5 @@ func (uc *GetPendingReviewsUseCase) Execute(ctx context.Context, req requests.Ge
 		return nil, err
 	}
 
-	return &requests.GetPendingReviewsResponse{Reviews: reviews}, nil
+	return &dto.GetPendingReviewsResponse{Reviews: reviews}, nil
 }

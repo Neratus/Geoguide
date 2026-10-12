@@ -4,8 +4,8 @@ import (
 	"context"
 	"log/slog"
 
+	"github.com/Neratus/geoguide/internal/delivery/dto"
 	"github.com/Neratus/geoguide/internal/domain/interfaces"
-	"github.com/Neratus/geoguide/internal/domain/requests"
 )
 
 type GetDistrictsByCityUseCase struct {
@@ -23,7 +23,7 @@ func NewGetDistrictsByCityUseCase(
 	}
 }
 
-func (uc *GetDistrictsByCityUseCase) Execute(ctx context.Context, req requests.GetDistrictsByCityRequest) ([]requests.DistrictResponse, error) {
+func (uc *GetDistrictsByCityUseCase) Execute(ctx context.Context, req dto.GetDistrictsByCityRequest) ([]dto.DistrictResponse, error) {
 	uc.logger.Info("getting districts by city", "city_id", req.CityID)
 	districts, err := uc.cityRepo.FindDistrictsByCity(ctx, req.CityID)
 	if err != nil {
@@ -37,9 +37,9 @@ func (uc *GetDistrictsByCityUseCase) Execute(ctx context.Context, req requests.G
 	if end > len(districts) {
 		end = len(districts)
 	}
-	result := make([]requests.DistrictResponse, 0, end-start)
+	result := make([]dto.DistrictResponse, 0, end-start)
 	for _, d := range districts[start:end] {
-		result = append(result, requests.DistrictResponse{
+		result = append(result, dto.DistrictResponse{
 			ID:          d.GetId(),
 			Name:        d.GetName(),
 			Description: d.GetDescription(),

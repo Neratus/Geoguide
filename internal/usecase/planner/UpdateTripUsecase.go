@@ -4,8 +4,8 @@ import (
 	"context"
 	"log/slog"
 
+	"github.com/Neratus/geoguide/internal/delivery/dto"
 	"github.com/Neratus/geoguide/internal/domain/interfaces"
-	"github.com/Neratus/geoguide/internal/domain/requests"
 	usecase_errors "github.com/Neratus/geoguide/internal/usecase"
 )
 
@@ -24,7 +24,7 @@ func NewUpdateTripUseCase(
 	}
 }
 
-func (uc *UpdateTripUseCase) Execute(ctx context.Context, req requests.UpdateTripRequest) error {
+func (uc *UpdateTripUseCase) Execute(ctx context.Context, req dto.UpdateTripRequest) error {
 	uc.logger.Info("updating trip", "trip_id", req.TripID)
 
 	trip, err := uc.tripRepo.FindByID(ctx, req.TripID)

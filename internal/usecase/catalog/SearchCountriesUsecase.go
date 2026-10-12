@@ -5,9 +5,9 @@ import (
 	"log/slog"
 	"strings"
 
+	"github.com/Neratus/geoguide/internal/delivery/dto"
 	"github.com/Neratus/geoguide/internal/domain"
 	"github.com/Neratus/geoguide/internal/domain/interfaces"
-	"github.com/Neratus/geoguide/internal/domain/requests"
 	"github.com/google/uuid"
 )
 
@@ -20,7 +20,7 @@ func NewSearchCountriesUseCase(countryRepo interfaces.CountryRepository, logger 
 	return &SearchCountriesUseCase{countryRepo: countryRepo, logger: logger}
 }
 
-func (uc *SearchCountriesUseCase) Execute(ctx context.Context, req requests.SearchCountriesRequest) ([]requests.CountrySearchResponse, error) {
+func (uc *SearchCountriesUseCase) Execute(ctx context.Context, req dto.SearchCountriesRequest) ([]dto.CountrySearchResponse, error) {
 	uc.logger.Info("searching countries", "query", req.Query)
 	allCountries, err := uc.countryRepo.FindAll(ctx)
 	if err != nil {
@@ -41,13 +41,13 @@ func (uc *SearchCountriesUseCase) Execute(ctx context.Context, req requests.Sear
 	if end > len(filtered) {
 		end = len(filtered)
 	}
-	result := make([]requests.CountrySearchResponse, 0, end-start)
+	result := make([]dto.CountrySearchResponse, 0, end-start)
 	for _, c := range filtered[start:end] {
 		capital := ""
 		if capID := c.GetCapitalID(); capID != domain.CityID(uuid.Nil) {
 			capital = capID.String()
 		}
-		result = append(result, requests.CountrySearchResponse{
+		result = append(result, dto.CountrySearchResponse{
 			ID:       c.GetId(),
 			Name:     c.GetName(),
 			Capital:  capital,

@@ -18,9 +18,10 @@ import (
 	"github.com/Neratus/geoguide/internal/delivery"
 	"github.com/Neratus/geoguide/internal/delivery/graphql/resolvers"
 	"github.com/Neratus/geoguide/internal/domain/interfaces"
+	"github.com/Neratus/geoguide/internal/pkg/jwt"
+	ratelimiter "github.com/Neratus/geoguide/internal/pkg/ratelimit"
 	"github.com/Neratus/geoguide/internal/repository"
 	"github.com/Neratus/geoguide/internal/repository/config"
-	"github.com/Neratus/geoguide/internal/services"
 	"github.com/Neratus/geoguide/internal/usecase/admin"
 	"github.com/Neratus/geoguide/internal/usecase/auth"
 	"github.com/Neratus/geoguide/internal/usecase/catalog"
@@ -246,7 +247,7 @@ func startEmbeddedEnv(t *testing.T) testEnv {
 		t.Logf("seed warning (non-fatal): %v", err)
 	}
 
-	services.InitJWT(cfg.Database.Auth.JWTSecret)
+	jwt.InitJWT(cfg.Database.Auth.JWTSecret)
 	userRepo := repos.UserRepo
 	sessionRepo := repos.SessionRepo
 	placeRepo := repos.PlaceRepo
@@ -255,7 +256,7 @@ func startEmbeddedEnv(t *testing.T) testEnv {
 	tripRepo := repos.TripRepo
 	favouriteRepo := repos.FavouriteRepo
 	staticRepo := repos.StaticRepo
-	rateLimiter, _ := services.NewRateLimiter(cfg)
+	rateLimiter, _ := ratelimiter.NewRateLimiter(cfg)
 
 	loginUC := auth.NewLoginUseCase(userRepo, sessionRepo, &noopNotifier{}, &noopTaskQueue{}, slog.Default(), rateLimiter)
 	logoutUC := auth.NewLogoutUseCase(sessionRepo, slog.Default())

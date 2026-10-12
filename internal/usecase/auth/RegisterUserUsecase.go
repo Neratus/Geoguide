@@ -6,12 +6,12 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/Neratus/geoguide/internal/delivery/dto"
 	"github.com/Neratus/geoguide/internal/domain"
 	usecase_errors "github.com/Neratus/geoguide/internal/usecase"
 	"github.com/google/uuid"
 
 	"github.com/Neratus/geoguide/internal/domain/interfaces"
-	"github.com/Neratus/geoguide/internal/domain/requests"
 )
 
 type RegisterUserUseCase struct {
@@ -41,7 +41,7 @@ func NewRegisterUserUseCase(
 	}
 }
 
-func (uc *RegisterUserUseCase) Execute(ctx context.Context, req requests.RegisterUserRequest) (*requests.RegisterUserResponse, error) {
+func (uc *RegisterUserUseCase) Execute(ctx context.Context, req dto.RegisterUserRequest) (*dto.RegisterUserResponse, error) {
 	uc.logger.Info("registering user", "email", req.Email)
 
 	key := fmt.Sprintf("rate:register:%s", req.Email)
@@ -96,7 +96,7 @@ func (uc *RegisterUserUseCase) Execute(ctx context.Context, req requests.Registe
 		}
 	}
 
-	return &requests.RegisterUserResponse{
+	return &dto.RegisterUserResponse{
 		ID:       user.GetId(),
 		Username: user.GetUsername(),
 		Email:    user.GetEmail(),

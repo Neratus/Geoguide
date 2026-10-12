@@ -4,8 +4,8 @@ import (
 	"context"
 	"log/slog"
 
+	"github.com/Neratus/geoguide/internal/delivery/dto"
 	"github.com/Neratus/geoguide/internal/domain/interfaces"
-	"github.com/Neratus/geoguide/internal/domain/requests"
 )
 
 type GetUserTripsUseCase struct {
@@ -23,7 +23,7 @@ func NewGetUserTripsUseCase(
 	}
 }
 
-func (uc *GetUserTripsUseCase) Execute(ctx context.Context, req requests.GetUserTripsRequest) ([]requests.UserTripResponse, error) {
+func (uc *GetUserTripsUseCase) Execute(ctx context.Context, req dto.GetUserTripsRequest) ([]dto.UserTripResponse, error) {
 	uc.logger.Info("getting user trips", "user_id", req.UserID)
 
 	trips, err := uc.tripRepo.FindByUser(ctx, req.UserID)
@@ -32,9 +32,9 @@ func (uc *GetUserTripsUseCase) Execute(ctx context.Context, req requests.GetUser
 		return nil, err
 	}
 
-	response := make([]requests.UserTripResponse, 0, len(trips))
+	response := make([]dto.UserTripResponse, 0, len(trips))
 	for _, t := range trips {
-		response = append(response, requests.UserTripResponse{
+		response = append(response, dto.UserTripResponse{
 			ID:        t.GetId(),
 			Title:     t.GetTitle(),
 			StartDate: t.GetStartDate().Format("2006-01-02"),

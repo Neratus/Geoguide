@@ -4,8 +4,8 @@ import (
 	"context"
 	"log/slog"
 
+	"github.com/Neratus/geoguide/internal/delivery/dto"
 	"github.com/Neratus/geoguide/internal/domain/interfaces"
-	"github.com/Neratus/geoguide/internal/domain/requests"
 	usecase_errors "github.com/Neratus/geoguide/internal/usecase"
 	"github.com/google/uuid"
 )
@@ -28,7 +28,7 @@ func NewGetCityUseCase(
 	}
 }
 
-func (uc *GetCityUseCase) Execute(ctx context.Context, req requests.GetCityRequest) (*requests.GetCityResponse, error) {
+func (uc *GetCityUseCase) Execute(ctx context.Context, req dto.GetCityRequest) (*dto.GetCityResponse, error) {
 	uc.logger.Info("getting city", "city_id", req.ID)
 
 	city, err := uc.cityRepo.FindByID(ctx, req.ID)
@@ -55,7 +55,7 @@ func (uc *GetCityUseCase) Execute(ctx context.Context, req requests.GetCityReque
 		}
 	}
 
-	return &requests.GetCityResponse{
+	return &dto.GetCityResponse{
 		ID:          city.GetId(),
 		Name:        city.GetName(),
 		Population:  city.GetPopulation(),

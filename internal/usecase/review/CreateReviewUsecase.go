@@ -4,9 +4,9 @@ import (
 	"context"
 	"log/slog"
 
+	"github.com/Neratus/geoguide/internal/delivery/dto"
 	"github.com/Neratus/geoguide/internal/domain"
 	"github.com/Neratus/geoguide/internal/domain/interfaces"
-	"github.com/Neratus/geoguide/internal/domain/requests"
 	usecase_errors "github.com/Neratus/geoguide/internal/usecase"
 )
 
@@ -31,7 +31,7 @@ func NewCreateReviewUseCase(
 	}
 }
 
-func (uc *CreateReviewUseCase) Execute(ctx context.Context, req requests.CreateReviewRequest) (*requests.CreateReviewResponse, error) {
+func (uc *CreateReviewUseCase) Execute(ctx context.Context, req dto.CreateReviewRequest) (*dto.CreateReviewResponse, error) {
 	uc.logger.Info("creating review", "user_id", req.UserID, "place_id", req.PlaceID, "rating", req.Rating)
 
 	place, err := uc.placeRepo.FindByID(ctx, domain.PlaceID(req.PlaceID))
@@ -84,7 +84,7 @@ func (uc *CreateReviewUseCase) Execute(ctx context.Context, req requests.CreateR
 	})
 
 	uc.logger.Info("review created successfully", "review_id", review.GetId())
-	return &requests.CreateReviewResponse{
+	return &dto.CreateReviewResponse{
 		ID:          review.GetId(),
 		Rating:      review.GetRating(),
 		Comment:     review.GetComment(),

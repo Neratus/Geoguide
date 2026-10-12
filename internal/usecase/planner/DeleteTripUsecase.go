@@ -4,8 +4,8 @@ import (
 	"context"
 	"log/slog"
 
+	"github.com/Neratus/geoguide/internal/delivery/dto"
 	"github.com/Neratus/geoguide/internal/domain/interfaces"
-	"github.com/Neratus/geoguide/internal/domain/requests"
 )
 
 type DeleteTripUseCase struct {
@@ -23,7 +23,7 @@ func NewDeleteTripUseCase(
 	}
 }
 
-func (uc *DeleteTripUseCase) Execute(ctx context.Context, req requests.DeleteTripRequest) error {
+func (uc *DeleteTripUseCase) Execute(ctx context.Context, req dto.DeleteTripRequest) error {
 	uc.logger.Info("deleting trip", "trip_id", req.TripID)
 
 	if err := uc.tripRepo.Delete(ctx, req.TripID); err != nil {

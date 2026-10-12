@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/Neratus/geoguide/internal/domain"
-	"github.com/Neratus/geoguide/internal/domain/requests"
 	"github.com/Neratus/geoguide/internal/mocks/builders"
 	city_repo "github.com/Neratus/geoguide/internal/repository/city"
 	configPkg "github.com/Neratus/geoguide/internal/repository/config"
@@ -154,7 +153,7 @@ func TestCreateTripUseCase_Integration(t *testing.T) {
 		user := builders.NewUserBuilder().Build()
 		require.NoError(t, userRepo.Save(ctx, user))
 
-		req := requests.CreateTripRequest{
+		req := dto.CreateTripRequest{
 			UserID:    user.GetId(),
 			Title:     "Поездка в Париж",
 			StartDate: time.Now().Add(24 * time.Hour),
@@ -194,7 +193,7 @@ func TestGetTripUseCase_Integration(t *testing.T) {
 			Build()
 		require.NoError(t, tripRepo.Save(ctx, trip))
 
-		req := requests.GetTripRequest{
+		req := dto.GetTripRequest{
 			TripID: trip.GetId(),
 			UserID: user.GetId(),
 		}
@@ -210,7 +209,7 @@ func TestGetTripUseCase_Integration(t *testing.T) {
 		user := builders.NewUserBuilder().Build()
 		require.NoError(t, userRepo.Save(ctx, user))
 
-		req := requests.GetTripRequest{
+		req := dto.GetTripRequest{
 			TripID: domain.TripID(uuid.New()),
 			UserID: user.GetId(),
 		}
@@ -235,7 +234,7 @@ func TestGetTripUseCase_Integration(t *testing.T) {
 			Build()
 		require.NoError(t, tripRepo.Save(ctx, trip))
 
-		req := requests.GetTripRequest{
+		req := dto.GetTripRequest{
 			TripID: trip.GetId(),
 			UserID: requester.GetId(),
 		}
@@ -264,7 +263,7 @@ func TestGetUserTripsUseCase_Integration(t *testing.T) {
 		require.NoError(t, tripRepo.Save(ctx, trip1))
 		require.NoError(t, tripRepo.Save(ctx, trip2))
 
-		req := requests.GetUserTripsRequest{UserID: user.GetId()}
+		req := dto.GetUserTripsRequest{UserID: user.GetId()}
 
 		resp, err := uc.Execute(ctx, req)
 
@@ -296,7 +295,7 @@ func TestAddPlaceToTripUseCase_Integration(t *testing.T) {
 		trip := builders.NewTripBuilder().WithUserID(user.GetId()).Build()
 		require.NoError(t, tripRepo.Save(ctx, trip))
 
-		req := requests.AddPlaceToTripRequest{
+		req := dto.AddPlaceToTripRequest{
 			TripID:      trip.GetId(),
 			PlaceID:     place.GetId(),
 			UserID:      user.GetId(),
@@ -321,7 +320,7 @@ func TestAddPlaceToTripUseCase_Integration(t *testing.T) {
 		trip := builders.NewTripBuilder().WithUserID(user.GetId()).Build()
 		require.NoError(t, tripRepo.Save(ctx, trip))
 
-		req := requests.AddPlaceToTripRequest{
+		req := dto.AddPlaceToTripRequest{
 			TripID:  trip.GetId(),
 			PlaceID: domain.PlaceID(uuid.New()),
 			UserID:  user.GetId(),
@@ -344,7 +343,7 @@ func TestAddPlaceToTripUseCase_Integration(t *testing.T) {
 		place := builders.NewPlaceBuilder().WithCityID(city.GetId()).Build()
 		require.NoError(t, placeRepo.Save(ctx, place))
 
-		req := requests.AddPlaceToTripRequest{
+		req := dto.AddPlaceToTripRequest{
 			TripID:  domain.TripID(uuid.New()),
 			PlaceID: place.GetId(),
 			UserID:  user.GetId(),
@@ -371,7 +370,7 @@ func TestDeleteTripUseCase_Integration(t *testing.T) {
 		trip := builders.NewTripBuilder().WithUserID(user.GetId()).Build()
 		require.NoError(t, tripRepo.Save(ctx, trip))
 
-		req := requests.DeleteTripRequest{TripID: trip.GetId()}
+		req := dto.DeleteTripRequest{TripID: trip.GetId()}
 
 		err := uc.Execute(ctx, req)
 

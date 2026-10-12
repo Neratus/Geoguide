@@ -6,9 +6,9 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/Neratus/geoguide/internal/delivery/dto"
 	"github.com/Neratus/geoguide/internal/domain"
 	"github.com/Neratus/geoguide/internal/domain/interfaces"
-	"github.com/Neratus/geoguide/internal/domain/requests"
 	"github.com/Neratus/geoguide/internal/pkg/jwt"
 	usecase_errors "github.com/Neratus/geoguide/internal/usecase"
 )
@@ -40,7 +40,7 @@ func NewLoginUseCase(
 	}
 }
 
-func (uc *LoginUseCase) Execute(ctx context.Context, req requests.LoginUserRequest, ip, userAgent string) (*requests.LoginUserResponse, error) {
+func (uc *LoginUseCase) Execute(ctx context.Context, req dto.LoginUserRequest, ip, userAgent string) (*dto.LoginUserResponse, error) {
 	uc.logger.Info("login user", "username", req.Username, "ip", ip)
 
 	key := fmt.Sprintf("rate:register:%s", req.Username)
@@ -74,7 +74,7 @@ func (uc *LoginUseCase) Execute(ctx context.Context, req requests.LoginUserReque
 			uc.logger.Error("failed to create 2fa challenge", "error", err)
 			return nil, err
 		}
-		return &requests.LoginUserResponse{
+		return &dto.LoginUserResponse{
 			RequiresTwoFactor: true,
 			ChallengeID:       challengeID,
 		}, nil
@@ -101,7 +101,7 @@ func (uc *LoginUseCase) Execute(ctx context.Context, req requests.LoginUserReque
 
 	uc.logger.Info("user logged in successfully", "user_id", user.GetId())
 
-	return &requests.LoginUserResponse{
+	return &dto.LoginUserResponse{
 		ID:       user.GetId(),
 		Username: user.GetUsername(),
 		Email:    user.GetEmail(),

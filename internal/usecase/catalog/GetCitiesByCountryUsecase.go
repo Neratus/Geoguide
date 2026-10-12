@@ -4,8 +4,8 @@ import (
 	"context"
 	"log/slog"
 
+	"github.com/Neratus/geoguide/internal/delivery/dto"
 	"github.com/Neratus/geoguide/internal/domain/interfaces"
-	"github.com/Neratus/geoguide/internal/domain/requests"
 	usecase_errors "github.com/Neratus/geoguide/internal/usecase"
 	"github.com/google/uuid"
 )
@@ -28,7 +28,7 @@ func NewGetCitiesByCountryUseCase(
 	}
 }
 
-func (uc *GetCitiesByCountryUseCase) Execute(ctx context.Context, req requests.GetCitiesByCountryRequest) ([]requests.CityResponse, error) {
+func (uc *GetCitiesByCountryUseCase) Execute(ctx context.Context, req dto.GetCitiesByCountryRequest) ([]dto.CityResponse, error) {
 	uc.logger.Info("getting cities by country", "country_id", req.CountryID, "limit", req.Limit, "offset", req.Offset)
 
 	if req.Limit <= 0 {
@@ -48,7 +48,7 @@ func (uc *GetCitiesByCountryUseCase) Execute(ctx context.Context, req requests.G
 		return nil, usecase_errors.ErrCitiesNotFound
 	}
 
-	response := make([]requests.CityResponse, 0, len(cities))
+	response := make([]dto.CityResponse, 0, len(cities))
 	for _, city := range cities {
 		coords := city.GetCoordinates()
 		coordStr := coords.String()
@@ -59,7 +59,7 @@ func (uc *GetCitiesByCountryUseCase) Execute(ctx context.Context, req requests.G
 				imageURL = url
 			}
 		}
-		response = append(response, requests.CityResponse{
+		response = append(response, dto.CityResponse{
 			ID:          city.GetId(),
 			Name:        city.GetName(),
 			Population:  city.GetPopulation(),

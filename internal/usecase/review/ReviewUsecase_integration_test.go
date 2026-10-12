@@ -14,7 +14,6 @@ import (
 
 	"github.com/Neratus/geoguide/internal/domain"
 	"github.com/Neratus/geoguide/internal/domain/interfaces"
-	"github.com/Neratus/geoguide/internal/domain/requests"
 	"github.com/Neratus/geoguide/internal/mocks/builders"
 	city_repo "github.com/Neratus/geoguide/internal/repository/city"
 	configPkg "github.com/Neratus/geoguide/internal/repository/config"
@@ -192,7 +191,7 @@ func TestCreateReviewUseCase_Integration(t *testing.T) {
 		user := builders.NewUserBuilder().Build()
 		require.NoError(t, userRepo.Save(ctx, user))
 
-		req := requests.CreateReviewRequest{
+		req := dto.CreateReviewRequest{
 			UserID:    user.GetId(),
 			PlaceID:   place.GetId(),
 			Rating:    5,
@@ -218,7 +217,7 @@ func TestCreateReviewUseCase_Integration(t *testing.T) {
 		user := builders.NewUserBuilder().Build()
 		require.NoError(t, userRepo.Save(ctx, user))
 
-		req := requests.CreateReviewRequest{
+		req := dto.CreateReviewRequest{
 			UserID:    user.GetId(),
 			PlaceID:   domain.PlaceID(uuid.New()),
 			Rating:    5,
@@ -251,7 +250,7 @@ func TestCreateReviewUseCase_Integration(t *testing.T) {
 
 		require.NoError(t, placeRepo.ModerateReview(ctx, existingReview.GetId(), true, ""))
 
-		req := requests.CreateReviewRequest{
+		req := dto.CreateReviewRequest{
 			UserID:    user.GetId(),
 			PlaceID:   place.GetId(),
 			Rating:    5,
@@ -291,7 +290,7 @@ func TestDeleteReviewUseCase_Integration(t *testing.T) {
 			Build()
 		require.NoError(t, placeRepo.SaveReview(ctx, review))
 
-		req := requests.DeleteReviewRequest{
+		req := dto.DeleteReviewRequest{
 			ReviewID:    review.GetId(),
 			UserID:      author.GetId(),
 			IsModerator: false,
@@ -326,7 +325,7 @@ func TestDeleteReviewUseCase_Integration(t *testing.T) {
 			Build()
 		require.NoError(t, placeRepo.SaveReview(ctx, review))
 
-		req := requests.DeleteReviewRequest{
+		req := dto.DeleteReviewRequest{
 			ReviewID:    review.GetId(),
 			UserID:      moderator.GetId(),
 			IsModerator: true,
@@ -343,7 +342,7 @@ func TestDeleteReviewUseCase_Integration(t *testing.T) {
 		user := builders.NewUserBuilder().Build()
 		require.NoError(t, userRepo.Save(ctx, user))
 
-		req := requests.DeleteReviewRequest{
+		req := dto.DeleteReviewRequest{
 			ReviewID:    domain.ReviewID(uuid.New()),
 			UserID:      user.GetId(),
 			IsModerator: false,
@@ -375,7 +374,7 @@ func TestDeleteReviewUseCase_Integration(t *testing.T) {
 			Build()
 		require.NoError(t, placeRepo.SaveReview(ctx, review))
 
-		req := requests.DeleteReviewRequest{
+		req := dto.DeleteReviewRequest{
 			ReviewID:    review.GetId(),
 			UserID:      randomUser.GetId(),
 			IsModerator: false,
@@ -417,7 +416,7 @@ func TestGetReviewsByPlaceUseCase_Integration(t *testing.T) {
 		require.NoError(t, placeRepo.ModerateReview(ctx, review1.GetId(), true, ""))
 		require.NoError(t, placeRepo.ModerateReview(ctx, review2.GetId(), true, ""))
 
-		req := requests.GetReviewsByPlaceRequest{
+		req := dto.GetReviewsByPlaceRequest{
 			PlaceID:      place.GetId(),
 			OnlyApproved: false,
 		}
@@ -445,7 +444,7 @@ func TestGetReviewsByPlaceUseCase_Integration(t *testing.T) {
 
 		require.NoError(t, placeRepo.ModerateReview(ctx, review1.GetId(), true, ""))
 
-		req := requests.GetReviewsByPlaceRequest{
+		req := dto.GetReviewsByPlaceRequest{
 			PlaceID:      place.GetId(),
 			OnlyApproved: true,
 		}
@@ -458,7 +457,7 @@ func TestGetReviewsByPlaceUseCase_Integration(t *testing.T) {
 	})
 
 	t.Run("Error_PlaceNotFound", func(t *testing.T) {
-		req := requests.GetReviewsByPlaceRequest{
+		req := dto.GetReviewsByPlaceRequest{
 			PlaceID:      domain.PlaceID(uuid.New()),
 			OnlyApproved: false,
 		}
@@ -496,7 +495,7 @@ func TestModerateReviewUseCase_Integration(t *testing.T) {
 			Build()
 		require.NoError(t, placeRepo.SaveReview(ctx, review))
 
-		req := requests.ModerateReviewRequest{
+		req := dto.ModerateReviewRequest{
 			ReviewID: review.GetId(),
 			Approved: true,
 			Comment:  "Все отлично",
@@ -518,7 +517,7 @@ func TestModerateReviewUseCase_Integration(t *testing.T) {
 	})
 
 	t.Run("Error_ReviewNotFound", func(t *testing.T) {
-		req := requests.ModerateReviewRequest{
+		req := dto.ModerateReviewRequest{
 			ReviewID: domain.ReviewID(uuid.New()),
 			Approved: true,
 			Comment:  "Ок",
@@ -549,7 +548,7 @@ func TestModerateReviewUseCase_Integration(t *testing.T) {
 
 		require.NoError(t, placeRepo.ModerateReview(ctx, alreadyModeratedReview.GetId(), false, ""))
 
-		req := requests.ModerateReviewRequest{
+		req := dto.ModerateReviewRequest{
 			ReviewID: alreadyModeratedReview.GetId(),
 			Approved: false,
 			Comment:  "Повторная модерация",

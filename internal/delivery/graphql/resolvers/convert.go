@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Neratus/geoguide/internal/delivery/dto"
 	gen "github.com/Neratus/geoguide/internal/delivery/gen/graphql"
 	"github.com/Neratus/geoguide/internal/domain"
-	"github.com/Neratus/geoguide/internal/domain/requests"
 	"github.com/google/uuid"
 )
 
@@ -70,7 +70,7 @@ func paginationOrDefault(p *gen.PaginationInput) (int, int) {
 	}
 	return limit, offset
 }
-func userFromUpdateProfile(p *requests.UpdateUserProfileResponse) *gen.User {
+func userFromUpdateProfile(p *dto.UpdateUserProfileResponse) *gen.User {
 	if p == nil {
 		return nil
 	}
@@ -102,7 +102,7 @@ func userFromUpdateProfile(p *requests.UpdateUserProfileResponse) *gen.User {
 	return u
 }
 
-func userFromProfile(p *requests.GetUserProfileResponse) *gen.User {
+func userFromProfile(p *dto.GetUserProfileResponse) *gen.User {
 	u := &gen.User{
 		ID:                 uuid.UUID(p.ID),
 		Username:           p.Username,
@@ -144,7 +144,7 @@ func stringsToUpper(s string) string {
 	return s
 }
 
-func countrySummary(c requests.CountryResponse) *gen.Country {
+func countrySummary(c dto.CountryResponse) *gen.Country {
 	out := &gen.Country{
 		ID:   uuid.UUID(c.ID),
 		Name: c.Name,
@@ -174,7 +174,7 @@ func countrySummary(c requests.CountryResponse) *gen.Country {
 	return out
 }
 
-func countryDetail(c requests.GetCountryResponse) *gen.CountryDetails {
+func countryDetail(c dto.GetCountryResponse) *gen.CountryDetails {
 	out := &gen.CountryDetails{
 		ID:       uuid.UUID(c.ID),
 		Name:     c.Name,
@@ -239,7 +239,7 @@ func countryDetail(c requests.GetCountryResponse) *gen.CountryDetails {
 	return out
 }
 
-func citySummary(c requests.CityResponse) *gen.City {
+func citySummary(c dto.CityResponse) *gen.City {
 	out := &gen.City{
 		ID:          uuid.UUID(c.ID),
 		Name:        c.Name,
@@ -262,7 +262,7 @@ func citySummary(c requests.CityResponse) *gen.City {
 	return out
 }
 
-func cityDetail(c requests.GetCityResponse) *gen.CityDetails {
+func cityDetail(c dto.GetCityResponse) *gen.CityDetails {
 	out := &gen.CityDetails{
 		ID:          uuid.UUID(c.ID),
 		Name:        c.Name,
@@ -293,7 +293,7 @@ func cityDetail(c requests.GetCityResponse) *gen.CityDetails {
 	return out
 }
 
-func districtFromResponse(d requests.DistrictResponse) *gen.District {
+func districtFromResponse(d dto.DistrictResponse) *gen.District {
 	out := &gen.District{
 		ID:          uuid.UUID(d.ID),
 		Name:        d.Name,
@@ -310,7 +310,7 @@ func districtFromResponse(d requests.DistrictResponse) *gen.District {
 	return out
 }
 
-func transportNodeFromResponse(n requests.TransportNodeResponse) *gen.TransportNode {
+func transportNodeFromResponse(n dto.TransportNodeResponse) *gen.TransportNode {
 	out := &gen.TransportNode{
 		ID:          uuid.UUID(n.ID),
 		Name:        n.Name,
@@ -328,7 +328,7 @@ func transportNodeFromResponse(n requests.TransportNodeResponse) *gen.TransportN
 	return out
 }
 
-func placesFromResponse(items []requests.PlaceResponse) []*gen.Place {
+func placesFromResponse(items []dto.PlaceResponse) []*gen.Place {
 	out := make([]*gen.Place, 0, len(items))
 	for _, p := range items {
 		out = append(out, placeFromSummary(p))
@@ -336,7 +336,7 @@ func placesFromResponse(items []requests.PlaceResponse) []*gen.Place {
 	return out
 }
 
-func placeFromSummary(p requests.PlaceResponse) *gen.Place {
+func placeFromSummary(p dto.PlaceResponse) *gen.Place {
 	out := &gen.Place{
 		ID:           uuid.UUID(p.ID),
 		Name:         p.Name,
@@ -403,7 +403,7 @@ func placeFromSummary(p requests.PlaceResponse) *gen.Place {
 	return out
 }
 
-func tripSummaryFromCreate(t requests.CreateTripResponse) *gen.Trip {
+func tripSummaryFromCreate(t dto.CreateTripResponse) *gen.Trip {
 	out := &gen.Trip{
 		ID:        uuid.UUID(t.ID),
 		Title:     t.Title,
@@ -420,7 +420,7 @@ func tripSummaryFromCreate(t requests.CreateTripResponse) *gen.Trip {
 	return out
 }
 
-func tripFromDetail(t requests.GetTripResponse) *gen.Trip {
+func tripFromDetail(t dto.GetTripResponse) *gen.Trip {
 	out := &gen.Trip{
 		ID:        uuid.UUID(t.ID),
 		Title:     t.Title,
@@ -465,7 +465,7 @@ func tripFromDetail(t requests.GetTripResponse) *gen.Trip {
 	return out
 }
 
-func reviewFromCreateResponse(r requests.CreateReviewResponse) *gen.Review {
+func reviewFromCreateResponse(r dto.CreateReviewResponse) *gen.Review {
 	out := &gen.Review{
 		ID:          uuid.UUID(r.ID),
 		Rating:      r.Rating,

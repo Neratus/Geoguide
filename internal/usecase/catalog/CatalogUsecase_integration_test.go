@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"github.com/Neratus/geoguide/internal/domain"
-	"github.com/Neratus/geoguide/internal/domain/requests"
 	"github.com/Neratus/geoguide/internal/mocks/builders"
 	city_repo "github.com/Neratus/geoguide/internal/repository/city"
 	configPkg "github.com/Neratus/geoguide/internal/repository/config"
@@ -176,7 +175,7 @@ func TestSearchCountriesUseCase_Integration(t *testing.T) {
 		require.NoError(t, countryRepo.Save(ctx, builders.NewCountryBuilder().WithName("Germany").Build()))
 		require.NoError(t, countryRepo.Save(ctx, builders.NewCountryBuilder().WithName("Finland").Build()))
 
-		req := requests.SearchCountriesRequest{Query: "fr", Limit: 10, Offset: 0}
+		req := dto.SearchCountriesRequest{Query: "fr", Limit: 10, Offset: 0}
 		resp, err := uc.Execute(ctx, req)
 
 		require.NoError(t, err)
@@ -192,7 +191,7 @@ func TestSearchCountriesUseCase_Integration(t *testing.T) {
 		require.NoError(t, countryRepo.Save(ctx, builders.NewCountryBuilder().WithName("Italy").Build()))
 		require.NoError(t, countryRepo.Save(ctx, builders.NewCountryBuilder().WithName("Spain").Build()))
 
-		req := requests.SearchCountriesRequest{Query: "", Limit: 10, Offset: 0}
+		req := dto.SearchCountriesRequest{Query: "", Limit: 10, Offset: 0}
 		resp, err := uc.Execute(ctx, req)
 
 		require.NoError(t, err)
@@ -212,7 +211,7 @@ func TestGetCitiesByCountryUseCase_Integration(t *testing.T) {
 		city := builders.NewCityBuilder().WithName("Tokyo").WithCountryID(country.GetId()).Build()
 		require.NoError(t, cityRepo.Save(ctx, city))
 
-		req := requests.GetCitiesByCountryRequest{CountryID: country.GetId(), Limit: 10, Offset: 0}
+		req := dto.GetCitiesByCountryRequest{CountryID: country.GetId(), Limit: 10, Offset: 0}
 		resp, err := uc.Execute(ctx, req)
 
 		require.NoError(t, err)
@@ -225,7 +224,7 @@ func TestGetCitiesByCountryUseCase_Integration(t *testing.T) {
 		_, cityRepo, _, _ := setupTest(t)
 		uc := NewGetCitiesByCountryUseCase(cityRepo, &stubStaticRepo{}, newTestLogger())
 
-		req := requests.GetCitiesByCountryRequest{CountryID: domain.CountryID(uuid.New()), Limit: 10, Offset: 0}
+		req := dto.GetCitiesByCountryRequest{CountryID: domain.CountryID(uuid.New()), Limit: 10, Offset: 0}
 		resp, err := uc.Execute(ctx, req)
 
 		require.ErrorIs(t, err, usecase_errors.ErrCitiesNotFound)
@@ -250,7 +249,7 @@ func TestGetHolidaysByDateUseCase_Integration(t *testing.T) {
 		require.NoError(t, countryRepo.SaveHoliday(ctx, h2))
 
 		reqDate, _ := time.Parse("2006-01-02", "2026-01-01")
-		resp, err := uc.Execute(ctx, requests.GetHolidaysByDateRequest{Date: reqDate})
+		resp, err := uc.Execute(ctx, dto.GetHolidaysByDateRequest{Date: reqDate})
 
 		require.NoError(t, err)
 		require.Len(t, resp, 1)
@@ -263,7 +262,7 @@ func TestGetHolidaysByDateUseCase_Integration(t *testing.T) {
 		uc := NewGetHolidaysByDateUseCase(countryRepo, newTestLogger())
 
 		reqDate, _ := time.Parse("2006-01-02", "2099-06-15")
-		resp, err := uc.Execute(ctx, requests.GetHolidaysByDateRequest{Date: reqDate})
+		resp, err := uc.Execute(ctx, dto.GetHolidaysByDateRequest{Date: reqDate})
 
 		require.NoError(t, err)
 		require.Empty(t, resp)
@@ -281,7 +280,7 @@ func TestGetCityUseCase_Integration(t *testing.T) {
 		city := builders.NewCityBuilder().WithName("Moscow").WithCountryID(country.GetId()).Build()
 		require.NoError(t, cityRepo.Save(ctx, city))
 
-		resp, err := uc.Execute(ctx, requests.GetCityRequest{ID: city.GetId()})
+		resp, err := uc.Execute(ctx, dto.GetCityRequest{ID: city.GetId()})
 
 		require.NoError(t, err)
 		require.NotNil(t, resp)
@@ -294,7 +293,7 @@ func TestGetCityUseCase_Integration(t *testing.T) {
 		_, cityRepo, _, _ := setupTest(t)
 		uc := NewGetCityUseCase(cityRepo, &stubStaticRepo{}, newTestLogger())
 
-		resp, err := uc.Execute(ctx, requests.GetCityRequest{ID: domain.CityID(uuid.New())})
+		resp, err := uc.Execute(ctx, dto.GetCityRequest{ID: domain.CityID(uuid.New())})
 		require.ErrorIs(t, err, usecase_errors.ErrCityNotFound)
 		require.Nil(t, resp)
 	})
@@ -314,7 +313,7 @@ func TestGetPlacesByCategoryUseCase_Integration(t *testing.T) {
 		place := builders.NewPlaceBuilder().WithCityID(city.GetId()).WithCategory("Музей").Build()
 		require.NoError(t, placeRepo.Save(ctx, place))
 
-		resp, err := uc.Execute(ctx, requests.GetPlacesByCategoryRequest{Category: "Музей"})
+		resp, err := uc.Execute(ctx, dto.GetPlacesByCategoryRequest{Category: "Музей"})
 
 		require.NoError(t, err)
 		require.Len(t, resp, 1)
@@ -326,7 +325,7 @@ func TestGetPlacesByCategoryUseCase_Integration(t *testing.T) {
 		_, _, placeRepo, _ := setupTest(t)
 		uc := NewGetPlacesByCategoryUseCase(placeRepo, &stubStaticRepo{}, newTestLogger())
 
-		resp, err := uc.Execute(ctx, requests.GetPlacesByCategoryRequest{Category: "NonExistent"})
+		resp, err := uc.Execute(ctx, dto.GetPlacesByCategoryRequest{Category: "NonExistent"})
 		require.NoError(t, err)
 		require.Empty(t, resp)
 	})
@@ -341,7 +340,7 @@ func TestGetCountriesUseCase_Integration(t *testing.T) {
 		require.NoError(t, countryRepo.Save(ctx, builders.NewCountryBuilder().WithName("France").Build()))
 		require.NoError(t, countryRepo.Save(ctx, builders.NewCountryBuilder().WithName("Germany").Build()))
 
-		resp, err := uc.Execute(ctx, requests.GetCountriesRequest{Limit: 10, Offset: 0})
+		resp, err := uc.Execute(ctx, dto.GetCountriesRequest{Limit: 10, Offset: 0})
 
 		require.NoError(t, err)
 		require.Len(t, resp, 2)
@@ -357,7 +356,7 @@ func TestGetCountryUseCase_Integration(t *testing.T) {
 		country := builders.NewCountryBuilder().WithName("Japan").Build()
 		require.NoError(t, countryRepo.Save(ctx, country))
 
-		resp, err := uc.Execute(ctx, requests.GetCountryRequest{ID: country.GetId()})
+		resp, err := uc.Execute(ctx, dto.GetCountryRequest{ID: country.GetId()})
 
 		require.NoError(t, err)
 		require.NotNil(t, resp)
@@ -369,7 +368,7 @@ func TestGetCountryUseCase_Integration(t *testing.T) {
 		countryRepo, cityRepo, _, _ := setupTest(t)
 		uc := NewGetCountryUseCase(countryRepo, cityRepo, &stubStaticRepo{}, newTestLogger())
 
-		resp, err := uc.Execute(ctx, requests.GetCountryRequest{ID: domain.CountryID(uuid.New())})
+		resp, err := uc.Execute(ctx, dto.GetCountryRequest{ID: domain.CountryID(uuid.New())})
 		require.Error(t, err)
 		require.Nil(t, resp)
 	})
@@ -388,7 +387,7 @@ func TestGetHolidaysByCountryUseCase_Integration(t *testing.T) {
 		h := domain.NewHolidayFromDB(uuid.New(), "День Победы", date, "Desc", "Trad", "Hist", true, country.GetId(), builders.DefaultImageID)
 		require.NoError(t, countryRepo.SaveHoliday(ctx, h))
 
-		resp, err := uc.Execute(ctx, requests.GetHolidaysByCountryRequest{CountryID: country.GetId()})
+		resp, err := uc.Execute(ctx, dto.GetHolidaysByCountryRequest{CountryID: country.GetId()})
 
 		require.NoError(t, err)
 		require.Len(t, resp, 1)
@@ -409,7 +408,7 @@ func TestGetPlaceUseCase_Integration(t *testing.T) {
 		place := builders.NewPlaceBuilder().WithCityID(city.GetId()).Build()
 		require.NoError(t, placeRepo.Save(ctx, place))
 
-		resp, err := uc.Execute(ctx, requests.GetPlaceRequest{ID: place.GetId()})
+		resp, err := uc.Execute(ctx, dto.GetPlaceRequest{ID: place.GetId()})
 
 		require.NoError(t, err)
 		require.NotNil(t, resp)
@@ -421,7 +420,7 @@ func TestGetPlaceUseCase_Integration(t *testing.T) {
 		_, _, placeRepo, userRepo := setupTest(t)
 		uc := NewGetPlaceUseCase(placeRepo, userRepo, &stubStaticRepo{}, newTestLogger())
 
-		resp, err := uc.Execute(ctx, requests.GetPlaceRequest{ID: domain.PlaceID(uuid.New())})
+		resp, err := uc.Execute(ctx, dto.GetPlaceRequest{ID: domain.PlaceID(uuid.New())})
 		require.Error(t, err)
 		require.Nil(t, resp)
 	})
@@ -440,7 +439,7 @@ func TestGetPlacesByCityUseCase_Integration(t *testing.T) {
 		place := builders.NewPlaceBuilder().WithCityID(city.GetId()).Build()
 		require.NoError(t, placeRepo.Save(ctx, place))
 
-		resp, err := uc.Execute(ctx, requests.GetPlacesByCityRequest{CityID: city.GetId(), Limit: 10, Offset: 0})
+		resp, err := uc.Execute(ctx, dto.GetPlacesByCityRequest{CityID: city.GetId(), Limit: 10, Offset: 0})
 
 		require.NoError(t, err)
 		require.GreaterOrEqual(t, len(resp), 1)
@@ -459,7 +458,7 @@ func TestSearchCitiesUseCase_Integration(t *testing.T) {
 		require.NoError(t, cityRepo.Save(ctx, builders.NewCityBuilder().WithName("Paris").WithCountryID(country.GetId()).Build()))
 		require.NoError(t, cityRepo.Save(ctx, builders.NewCityBuilder().WithName("London").WithCountryID(country.GetId()).Build()))
 
-		resp, err := uc.Execute(ctx, requests.SearchCitiesRequest{Query: "par", Limit: 10, Offset: 0})
+		resp, err := uc.Execute(ctx, dto.SearchCitiesRequest{Query: "par", Limit: 10, Offset: 0})
 
 		require.NoError(t, err)
 		require.GreaterOrEqual(t, len(resp), 1)
@@ -471,7 +470,7 @@ func TestSearchCitiesUseCase_Integration(t *testing.T) {
 		_, cityRepo, _, _ := setupTest(t)
 		uc := NewSearchCitiesUseCase(cityRepo, newTestLogger())
 
-		resp, err := uc.Execute(ctx, requests.SearchCitiesRequest{Query: "xyz_nonexistent", Limit: 10, Offset: 0})
+		resp, err := uc.Execute(ctx, dto.SearchCitiesRequest{Query: "xyz_nonexistent", Limit: 10, Offset: 0})
 		require.NoError(t, err)
 		require.Empty(t, resp)
 	})

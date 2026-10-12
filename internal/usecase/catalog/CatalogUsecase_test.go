@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Neratus/geoguide/internal/delivery/dto"
 	"github.com/Neratus/geoguide/internal/domain"
-	"github.com/Neratus/geoguide/internal/domain/requests"
 	"github.com/Neratus/geoguide/internal/mocks"
 	"github.com/Neratus/geoguide/internal/mocks/builders"
 	usecase_errors "github.com/Neratus/geoguide/internal/usecase"
@@ -99,7 +99,7 @@ func TestSearchCountriesUseCase(t *testing.T) {
 		_ = repo.Save(ctx, makeCountry("Germany"))
 		_ = repo.Save(ctx, makeCountry("Finland"))
 
-		req := requests.SearchCountriesRequest{Query: "fr", Limit: 10, Offset: 0}
+		req := dto.SearchCountriesRequest{Query: "fr", Limit: 10, Offset: 0}
 		resp, err := uc.Execute(ctx, req)
 
 		require.NoError(t, err)
@@ -114,7 +114,7 @@ func TestSearchCountriesUseCase(t *testing.T) {
 		_ = repo.Save(ctx, makeCountry("France"))
 		_ = repo.Save(ctx, makeCountry("Germany"))
 
-		req := requests.SearchCountriesRequest{Query: "", Limit: 10, Offset: 0}
+		req := dto.SearchCountriesRequest{Query: "", Limit: 10, Offset: 0}
 		resp, err := uc.Execute(ctx, req)
 
 		require.NoError(t, err)
@@ -126,7 +126,7 @@ func TestSearchCountriesUseCase(t *testing.T) {
 		repo.ForceError.FindAll = errors.New("db down")
 		uc := NewSearchCountriesUseCase(repo, logger)
 
-		req := requests.SearchCountriesRequest{Query: "test", Limit: 10, Offset: 0}
+		req := dto.SearchCountriesRequest{Query: "test", Limit: 10, Offset: 0}
 		resp, err := uc.Execute(ctx, req)
 
 		require.Error(t, err)
@@ -147,7 +147,7 @@ func TestGetCitiesByCountryUseCase(t *testing.T) {
 		city := makeCity("Paris", countryID)
 		_ = cityRepo.Save(ctx, city)
 
-		req := requests.GetCitiesByCountryRequest{CountryID: countryID, Limit: 10, Offset: 0}
+		req := dto.GetCitiesByCountryRequest{CountryID: countryID, Limit: 10, Offset: 0}
 		resp, err := uc.Execute(ctx, req)
 
 		require.NoError(t, err)
@@ -160,7 +160,7 @@ func TestGetCitiesByCountryUseCase(t *testing.T) {
 		staticRepo := mocks.NewMockStaticPageRepo()
 		uc := NewGetCitiesByCountryUseCase(cityRepo, staticRepo, logger)
 
-		req := requests.GetCitiesByCountryRequest{CountryID: domain.CountryID(uuid.New()), Limit: 10, Offset: 0}
+		req := dto.GetCitiesByCountryRequest{CountryID: domain.CountryID(uuid.New()), Limit: 10, Offset: 0}
 		resp, err := uc.Execute(ctx, req)
 
 		require.ErrorIs(t, err, usecase_errors.ErrCitiesNotFound)
@@ -173,7 +173,7 @@ func TestGetCitiesByCountryUseCase(t *testing.T) {
 		staticRepo := mocks.NewMockStaticPageRepo()
 		uc := NewGetCitiesByCountryUseCase(cityRepo, staticRepo, logger)
 
-		req := requests.GetCitiesByCountryRequest{CountryID: domain.CountryID(uuid.New()), Limit: 10, Offset: 0}
+		req := dto.GetCitiesByCountryRequest{CountryID: domain.CountryID(uuid.New()), Limit: 10, Offset: 0}
 		resp, err := uc.Execute(ctx, req)
 
 		require.Error(t, err)
@@ -194,7 +194,7 @@ func TestGetHolidaysByDateUseCase(t *testing.T) {
 		_ = repo.SaveHoliday(ctx, makeHoliday("Christmas", "2026-12-25", countryID))
 
 		reqDate, _ := time.Parse("2006-01-02", "2026-01-01")
-		req := requests.GetHolidaysByDateRequest{Date: reqDate}
+		req := dto.GetHolidaysByDateRequest{Date: reqDate}
 		resp, err := uc.Execute(ctx, req)
 
 		require.NoError(t, err)
@@ -207,7 +207,7 @@ func TestGetHolidaysByDateUseCase(t *testing.T) {
 		uc := NewGetHolidaysByDateUseCase(repo, logger)
 
 		reqDate, _ := time.Parse("2006-01-02", "2026-06-15")
-		req := requests.GetHolidaysByDateRequest{Date: reqDate}
+		req := dto.GetHolidaysByDateRequest{Date: reqDate}
 		resp, err := uc.Execute(ctx, req)
 
 		require.NoError(t, err)
@@ -220,7 +220,7 @@ func TestGetHolidaysByDateUseCase(t *testing.T) {
 		uc := NewGetHolidaysByDateUseCase(repo, logger)
 
 		reqDate, _ := time.Parse("2006-01-02", "2026-01-01")
-		req := requests.GetHolidaysByDateRequest{Date: reqDate}
+		req := dto.GetHolidaysByDateRequest{Date: reqDate}
 		resp, err := uc.Execute(ctx, req)
 
 		require.Error(t, err)
@@ -240,7 +240,7 @@ func TestGetCityUseCase(t *testing.T) {
 		city := makeCity("Moscow", domain.CountryID(uuid.New()))
 		_ = cityRepo.Save(ctx, city)
 
-		req := requests.GetCityRequest{ID: city.GetId()}
+		req := dto.GetCityRequest{ID: city.GetId()}
 		resp, err := uc.Execute(ctx, req)
 
 		require.NoError(t, err)
@@ -254,7 +254,7 @@ func TestGetCityUseCase(t *testing.T) {
 		staticRepo := mocks.NewMockStaticPageRepo()
 		uc := NewGetCityUseCase(cityRepo, staticRepo, logger)
 
-		req := requests.GetCityRequest{ID: domain.CityID(uuid.New())}
+		req := dto.GetCityRequest{ID: domain.CityID(uuid.New())}
 		resp, err := uc.Execute(ctx, req)
 
 		require.ErrorIs(t, err, usecase_errors.ErrCityNotFound)
@@ -275,7 +275,7 @@ func TestGetPlacesByCategoryUseCase(t *testing.T) {
 		place := placeBuilder.Build()
 		_ = placeRepo.Save(ctx, place)
 
-		req := requests.GetPlacesByCategoryRequest{Category: place.GetCategory()}
+		req := dto.GetPlacesByCategoryRequest{Category: place.GetCategory()}
 		resp, err := uc.Execute(ctx, req)
 
 		require.NoError(t, err)
@@ -289,7 +289,7 @@ func TestGetPlacesByCategoryUseCase(t *testing.T) {
 		staticRepo := mocks.NewMockStaticPageRepo()
 		uc := NewGetPlacesByCategoryUseCase(placeRepo, staticRepo, logger)
 
-		req := requests.GetPlacesByCategoryRequest{Category: "NonExistent"}
+		req := dto.GetPlacesByCategoryRequest{Category: "NonExistent"}
 		resp, err := uc.Execute(ctx, req)
 
 		require.NoError(t, err)
@@ -312,7 +312,7 @@ func TestGetCountriesUseCase(t *testing.T) {
 		_ = repo.Save(ctx, makeCountry("France"))
 		_ = repo.Save(ctx, makeCountry("Germany"))
 
-		req := requests.GetCountriesRequest{Limit: 10, Offset: 0}
+		req := dto.GetCountriesRequest{Limit: 10, Offset: 0}
 		resp, err := uc.Execute(ctx, req)
 
 		require.NoError(t, err)
@@ -326,7 +326,7 @@ func TestGetCountriesUseCase(t *testing.T) {
 		staticRepo := mocks.NewMockStaticPageRepo()
 		uc := NewGetCountriesUseCase(repo, cityRepo, staticRepo, logger)
 
-		req := requests.GetCountriesRequest{Limit: 10, Offset: 0}
+		req := dto.GetCountriesRequest{Limit: 10, Offset: 0}
 		resp, err := uc.Execute(ctx, req)
 
 		require.Error(t, err)
@@ -347,7 +347,7 @@ func TestGetCountryUseCase(t *testing.T) {
 		country := makeCountry("Japan")
 		_ = repo.Save(ctx, country)
 
-		req := requests.GetCountryRequest{ID: country.GetId()}
+		req := dto.GetCountryRequest{ID: country.GetId()}
 		resp, err := uc.Execute(ctx, req)
 
 		require.NoError(t, err)
@@ -361,7 +361,7 @@ func TestGetCountryUseCase(t *testing.T) {
 		cityRepo := mocks.NewMockCityRepository()
 		uc := NewGetCountryUseCase(repo, cityRepo, staticRepo, logger)
 
-		req := requests.GetCountryRequest{ID: domain.CountryID(uuid.New())}
+		req := dto.GetCountryRequest{ID: domain.CountryID(uuid.New())}
 		resp, err := uc.Execute(ctx, req)
 
 		require.Error(t, err)
@@ -381,7 +381,7 @@ func TestGetHolidaysByCountryUseCase(t *testing.T) {
 		_ = repo.Save(ctx, makeCountryWithID(countryID, "Россия"))
 		_ = repo.SaveHoliday(ctx, makeHoliday("День Победы", "2026-05-09", countryID))
 
-		req := requests.GetHolidaysByCountryRequest{CountryID: countryID}
+		req := dto.GetHolidaysByCountryRequest{CountryID: countryID}
 		resp, err := uc.Execute(ctx, req)
 
 		require.NoError(t, err)
@@ -394,7 +394,7 @@ func TestGetHolidaysByCountryUseCase(t *testing.T) {
 		repo.ForceError.FindHolidaysByCountry = errors.New("db error")
 		uc := NewGetHolidaysByCountryUseCase(repo, logger)
 
-		req := requests.GetHolidaysByCountryRequest{CountryID: domain.CountryID(uuid.New())}
+		req := dto.GetHolidaysByCountryRequest{CountryID: domain.CountryID(uuid.New())}
 		resp, err := uc.Execute(ctx, req)
 
 		require.Error(t, err)
@@ -416,7 +416,7 @@ func TestGetPlaceUseCase(t *testing.T) {
 		place := placeBuilder.Build()
 		_ = placeRepo.Save(ctx, place)
 
-		req := requests.GetPlaceRequest{ID: place.GetId()}
+		req := dto.GetPlaceRequest{ID: place.GetId()}
 		resp, err := uc.Execute(ctx, req)
 
 		require.NoError(t, err)
@@ -430,7 +430,7 @@ func TestGetPlaceUseCase(t *testing.T) {
 		user := mocks.NewMockUserRepository()
 		uc := NewGetPlaceUseCase(placeRepo, user, staticRepo, logger)
 
-		req := requests.GetPlaceRequest{ID: domain.PlaceID(uuid.New())}
+		req := dto.GetPlaceRequest{ID: domain.PlaceID(uuid.New())}
 		resp, err := uc.Execute(ctx, req)
 
 		require.Error(t, err)
@@ -452,7 +452,7 @@ func TestGetPlacesUseCase(t *testing.T) {
 
 		uc := NewGetPlacesByCityUseCase(placeRepo, staticRepo, logger)
 
-		req := requests.GetPlacesByCityRequest{CityID: place.GetCityID(), Limit: 10, Offset: 0}
+		req := dto.GetPlacesByCityRequest{CityID: place.GetCityID(), Limit: 10, Offset: 0}
 		resp, err := uc.Execute(ctx, req)
 
 		require.NoError(t, err)
@@ -473,7 +473,7 @@ func TestSearchCitiesUseCase(t *testing.T) {
 		_ = cityRepo.Save(ctx, makeCity("Paris", countryID))
 		_ = cityRepo.Save(ctx, makeCity("London", countryID))
 
-		req := requests.SearchCitiesRequest{Query: "par", Limit: 10, Offset: 0}
+		req := dto.SearchCitiesRequest{Query: "par", Limit: 10, Offset: 0}
 		resp, err := uc.Execute(ctx, req)
 
 		require.NoError(t, err)
@@ -485,7 +485,7 @@ func TestSearchCitiesUseCase(t *testing.T) {
 		cityRepo := mocks.NewMockCityRepository()
 		uc := NewSearchCitiesUseCase(cityRepo, logger)
 
-		req := requests.SearchCitiesRequest{Query: "xyz_nonexistent", Limit: 10, Offset: 0}
+		req := dto.SearchCitiesRequest{Query: "xyz_nonexistent", Limit: 10, Offset: 0}
 		resp, err := uc.Execute(ctx, req)
 
 		require.NoError(t, err)
@@ -497,7 +497,7 @@ func TestSearchCitiesUseCase(t *testing.T) {
 		cityRepo.ForceError.SearchCities = errors.New("db error")
 		uc := NewSearchCitiesUseCase(cityRepo, logger)
 
-		req := requests.SearchCitiesRequest{Query: "test", Limit: 10, Offset: 0}
+		req := dto.SearchCitiesRequest{Query: "test", Limit: 10, Offset: 0}
 		resp, err := uc.Execute(ctx, req)
 
 		require.Error(t, err)

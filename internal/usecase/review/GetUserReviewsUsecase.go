@@ -4,8 +4,8 @@ import (
 	"context"
 	"log/slog"
 
+	"github.com/Neratus/geoguide/internal/delivery/dto"
 	"github.com/Neratus/geoguide/internal/domain/interfaces"
-	"github.com/Neratus/geoguide/internal/domain/requests"
 	usecase_errors "github.com/Neratus/geoguide/internal/usecase"
 )
 
@@ -24,7 +24,7 @@ func NewGetUserReviewsUseCase(
 	}
 }
 
-func (uc *GetUserReviewsUseCase) Execute(ctx context.Context, req requests.GetUserReviewsRequest) ([]requests.UserReviewResponse, error) {
+func (uc *GetUserReviewsUseCase) Execute(ctx context.Context, req dto.GetUserReviewsRequest) ([]dto.UserReviewResponse, error) {
 	uc.logger.Info("getting user reviews", "user_id", req.UserID)
 
 	if req.Limit <= 0 {
@@ -42,9 +42,9 @@ func (uc *GetUserReviewsUseCase) Execute(ctx context.Context, req requests.GetUs
 		return nil, usecase_errors.ErrReviewsNotFound
 	}
 
-	resp := make([]requests.UserReviewResponse, 0, len(reviews))
+	resp := make([]dto.UserReviewResponse, 0, len(reviews))
 	for _, r := range reviews {
-		resp = append(resp, requests.UserReviewResponse{
+		resp = append(resp, dto.UserReviewResponse{
 			ID:          r.GetId(),
 			Rating:      r.GetRating(),
 			Comment:     r.GetComment(),

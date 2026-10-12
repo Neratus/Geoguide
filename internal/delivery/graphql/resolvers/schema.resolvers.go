@@ -6,16 +6,16 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Neratus/geoguide/internal/delivery/dto"
 	gen "github.com/Neratus/geoguide/internal/delivery/gen/graphql"
 	"github.com/Neratus/geoguide/internal/domain"
-	"github.com/Neratus/geoguide/internal/domain/requests"
 	"github.com/Neratus/geoguide/internal/usecase/content"
 	"github.com/Neratus/geoguide/internal/usecase/favourites"
 	"github.com/google/uuid"
 )
 
 func (r *mutationResolver) RegisterUser(ctx context.Context, input gen.RegisterUserInput) (*gen.User, error) {
-	req := requests.RegisterUserRequest{
+	req := dto.RegisterUserRequest{
 		Username:           input.Username,
 		Email:              input.Email,
 		Password:           input.Password,
@@ -27,7 +27,7 @@ func (r *mutationResolver) RegisterUser(ctx context.Context, input gen.RegisterU
 	if err != nil {
 		return nil, err
 	}
-	profile, err := r.GetProfileUC.Execute(ctx, requests.GetUserProfileRequest{UserID: resp.ID})
+	profile, err := r.GetProfileUC.Execute(ctx, dto.GetUserProfileRequest{UserID: resp.ID})
 	if err != nil {
 		return &gen.User{
 			ID:                 uuid.UUID(resp.ID),
@@ -41,7 +41,7 @@ func (r *mutationResolver) RegisterUser(ctx context.Context, input gen.RegisterU
 }
 
 func (r *mutationResolver) VerifyContact(ctx context.Context, input gen.VerifyContactInput) (*gen.OperationResult, error) {
-	err := r.VerifyContactUC.Execute(ctx, requests.VerifyContactRequest{
+	err := r.VerifyContactUC.Execute(ctx, dto.VerifyContactRequest{
 		UserID:  domain.UserID(input.UserID),
 		Contact: input.Contact,
 		Code:    input.Code,
@@ -56,7 +56,7 @@ func (r *mutationResolver) VerifyContact(ctx context.Context, input gen.VerifyCo
 }
 
 func (r *mutationResolver) Login(ctx context.Context, input gen.LoginInput) (*gen.LoginPayload, error) {
-	res, err := r.LoginUC.Execute(ctx, requests.LoginUserRequest{
+	res, err := r.LoginUC.Execute(ctx, dto.LoginUserRequest{
 		Username: input.Username,
 		Password: input.Password,
 	}, "", "")
@@ -77,7 +77,7 @@ func (r *mutationResolver) Login(ctx context.Context, input gen.LoginInput) (*ge
 		return payload, nil
 	}
 
-	if profile, err := r.GetProfileUC.Execute(ctx, requests.GetUserProfileRequest{UserID: res.ID}); err == nil {
+	if profile, err := r.GetProfileUC.Execute(ctx, dto.GetUserProfileRequest{UserID: res.ID}); err == nil {
 		payload.User = userFromProfile(profile)
 	} else {
 		id := uuid.UUID(res.ID)
@@ -100,7 +100,7 @@ func (r *mutationResolver) Logout(ctx context.Context) (*gen.OperationResult, er
 			Error:   &gen.Error{Message: "missing token"},
 		}, nil
 	}
-	if _, err := r.LogoutUC.Execute(ctx, requests.LogoutRequest{Token: token}); err != nil {
+	if _, err := r.LogoutUC.Execute(ctx, dto.LogoutRequest{Token: token}); err != nil {
 		return &gen.OperationResult{
 			Success: false,
 			Error:   &gen.Error{Message: err.Error()},
@@ -110,7 +110,7 @@ func (r *mutationResolver) Logout(ctx context.Context) (*gen.OperationResult, er
 }
 
 func (r *mutationResolver) EnableTwoFactor(ctx context.Context, input gen.EnableTwoFactorInput) (*gen.TwoFactorSetup, error) {
-	codes, err := r.Enable2FAUC.VerifyAndEnable(ctx, requests.EnableTwoFactorRequest{
+	codes, err := r.Enable2FAUC.VerifyAndEnable(ctx, dto.EnableTwoFactorRequest{
 		UserID: domain.UserID(input.UserID),
 		Secret: input.Secret,
 		Code:   input.Code,
@@ -125,7 +125,7 @@ func (r *mutationResolver) EnableTwoFactor(ctx context.Context, input gen.Enable
 }
 
 func (r *mutationResolver) VerifyTwoFactor(ctx context.Context, input gen.VerifyTwoFactorInput) (*gen.AuthToken, error) {
-	tok, err := r.Verify2FAUC.Execute(ctx, requests.VerifyTwoFactorRequest{
+	tok, err := r.Verify2FAUC.Execute(ctx, dto.VerifyTwoFactorRequest{
 		ChallengeID: input.ChallengeID,
 		Code:        input.Code,
 	})
@@ -144,7 +144,7 @@ func (r *mutationResolver) UpdateUserProfile(ctx context.Context, input gen.Upda
 		return nil, fmt.Errorf("missing token")
 	}
 
-	req := requests.UpdateUserProfileRequest{Token: rawToken}
+	req := dto.UpdateUserProfileRequest{Token: rawToken}
 	if input.Username != nil {
 		req.Username = input.Username
 	}
@@ -176,7 +176,7 @@ func (r *mutationResolver) ModerateUser(ctx context.Context, input gen.ModerateU
 	if err != nil {
 		return nil, err
 	}
-	res, err := r.ModerateUserUC.Execute(ctx, requests.ModerateUserRequest{
+	res, err := r.ModerateUserUC.Execute(ctx, dto.ModerateUserRequest{
 		UserID:      domain.UserID(input.UserID),
 		Block:       input.Block,
 		Reason:      derefString(input.Reason),
@@ -198,7 +198,7 @@ func (r *mutationResolver) ModerateReview(ctx context.Context, input gen.Moderat
 	if err != nil {
 		return nil, err
 	}
-	res, err := r.ModerateReviewUC.Execute(ctx, requests.ModerateReviewRequest{
+	res, err := r.ModerateReviewUC.Execute(ctx, dto.ModerateReviewRequest{
 		ReviewID:    domain.ReviewID(input.ReviewID),
 		Approved:    input.Approved,
 		Comment:     derefString(input.Comment),
@@ -219,7 +219,7 @@ func (r *mutationResolver) CreateTrip(ctx context.Context, input gen.CreateTripI
 	if err != nil {
 		return nil, err
 	}
-	res, err := r.CreateTripUC.Execute(ctx, requests.CreateTripRequest{
+	res, err := r.CreateTripUC.Execute(ctx, dto.CreateTripRequest{
 		Title:     input.Title,
 		StartDate: input.StartDate,
 		EndDate:   input.EndDate,
@@ -238,7 +238,7 @@ func (r *mutationResolver) UpdateTrip(ctx context.Context, id uuid.UUID, input g
 	if err != nil {
 		return nil, err
 	}
-	req := requests.UpdateTripRequest{
+	req := dto.UpdateTripRequest{
 		TripID:    domain.TripID(id),
 		UserID:    domain.UserID(uid),
 		Title:     input.Title,
@@ -251,7 +251,7 @@ func (r *mutationResolver) UpdateTrip(ctx context.Context, id uuid.UUID, input g
 	if err := r.UpdateTripUC.Execute(ctx, req); err != nil {
 		return nil, err
 	}
-	trip, err := r.GetTripUC.Execute(ctx, requests.GetTripRequest{
+	trip, err := r.GetTripUC.Execute(ctx, dto.GetTripRequest{
 		TripID: domain.TripID(id),
 		UserID: domain.UserID(uid),
 	})
@@ -262,7 +262,7 @@ func (r *mutationResolver) UpdateTrip(ctx context.Context, id uuid.UUID, input g
 }
 
 func (r *mutationResolver) DeleteTrip(ctx context.Context, id uuid.UUID) (*gen.OperationResult, error) {
-	if err := r.DeleteTripUC.Execute(ctx, requests.DeleteTripRequest{TripID: domain.TripID(id)}); err != nil {
+	if err := r.DeleteTripUC.Execute(ctx, dto.DeleteTripRequest{TripID: domain.TripID(id)}); err != nil {
 		return &gen.OperationResult{
 			Success: false,
 			Error:   &gen.Error{Message: err.Error()},
@@ -276,7 +276,7 @@ func (r *mutationResolver) AddPlaceToTrip(ctx context.Context, tripID uuid.UUID,
 	if err != nil {
 		return nil, err
 	}
-	req := requests.AddPlaceToTripRequest{
+	req := dto.AddPlaceToTripRequest{
 		TripID:      domain.TripID(tripID),
 		PlaceID:     domain.PlaceID(input.PlaceID),
 		DayNumber:   input.DayNumber,
@@ -302,7 +302,7 @@ func (r *mutationResolver) RemovePlaceFromTrip(ctx context.Context, tripID uuid.
 	if err != nil {
 		return nil, err
 	}
-	req := requests.RemovePlaceFromTripRequest{
+	req := dto.RemovePlaceFromTripRequest{
 		TripID:  domain.TripID(tripID),
 		PlaceID: domain.PlaceID(placeID),
 		UserID:  domain.UserID(uid),
@@ -321,7 +321,7 @@ func (r *mutationResolver) CreateReview(ctx context.Context, input gen.CreateRev
 	if err != nil {
 		return nil, err
 	}
-	res, err := r.CreateReviewUC.Execute(ctx, requests.CreateReviewRequest{
+	res, err := r.CreateReviewUC.Execute(ctx, dto.CreateReviewRequest{
 		UserID:    domain.UserID(uid),
 		PlaceID:   domain.PlaceID(input.PlaceID),
 		Rating:    input.Rating,
@@ -341,7 +341,7 @@ func (r *mutationResolver) DeleteReview(ctx context.Context, id uuid.UUID) (*gen
 		return nil, err
 	}
 	isMod := IsModerator(ctx)
-	res, err := r.DeleteReviewUC.Execute(ctx, requests.DeleteReviewRequest{
+	res, err := r.DeleteReviewUC.Execute(ctx, dto.DeleteReviewRequest{
 		ReviewID:    domain.ReviewID(id),
 		UserID:      domain.UserID(uid),
 		IsModerator: isMod,
@@ -390,7 +390,7 @@ func (r *mutationResolver) RemoveFavourite(ctx context.Context, placeID uuid.UUI
 }
 
 func (r *mutationResolver) GenerateReport(ctx context.Context, input gen.GenerateReportInput) (*gen.Report, error) {
-	req := requests.GenerateReportRequest{
+	req := dto.GenerateReportRequest{
 		ReportType: string(input.ReportType),
 		Format:     domain.ReportFormat(strings.ToLower(string(input.Format))),
 		Options: domain.ReportOptions{
@@ -426,7 +426,7 @@ func (r *queryResolver) Me(ctx context.Context) (*gen.User, error) {
 	if err != nil {
 		return nil, err
 	}
-	profile, err := r.GetProfileUC.Execute(ctx, requests.GetUserProfileRequest{UserID: domain.UserID(uid)})
+	profile, err := r.GetProfileUC.Execute(ctx, dto.GetUserProfileRequest{UserID: domain.UserID(uid)})
 	if err != nil {
 		return nil, err
 	}
@@ -435,7 +435,7 @@ func (r *queryResolver) Me(ctx context.Context) (*gen.User, error) {
 
 func (r *queryResolver) Countries(ctx context.Context, search *string, pagination *gen.PaginationInput) ([]*gen.Country, error) {
 	limit, offset := paginationOrDefault(pagination)
-	items, err := r.GetCountriesUC.Execute(ctx, requests.GetCountriesRequest{
+	items, err := r.GetCountriesUC.Execute(ctx, dto.GetCountriesRequest{
 		Limit:  limit,
 		Offset: offset,
 		Search: derefString(search),
@@ -451,7 +451,7 @@ func (r *queryResolver) Countries(ctx context.Context, search *string, paginatio
 }
 
 func (r *queryResolver) Country(ctx context.Context, id uuid.UUID) (*gen.CountryDetails, error) {
-	c, err := r.GetCountryUC.Execute(ctx, requests.GetCountryRequest{ID: domain.CountryID(id)})
+	c, err := r.GetCountryUC.Execute(ctx, dto.GetCountryRequest{ID: domain.CountryID(id)})
 	if err != nil {
 		return nil, err
 	}
@@ -460,7 +460,7 @@ func (r *queryResolver) Country(ctx context.Context, id uuid.UUID) (*gen.Country
 
 func (r *queryResolver) CitiesByCountry(ctx context.Context, countryID uuid.UUID, pagination *gen.PaginationInput) ([]*gen.City, error) {
 	limit, offset := paginationOrDefault(pagination)
-	items, err := r.GetCitiesUC.Execute(ctx, requests.GetCitiesByCountryRequest{
+	items, err := r.GetCitiesUC.Execute(ctx, dto.GetCitiesByCountryRequest{
 		CountryID: domain.CountryID(countryID),
 		Limit:     limit,
 		Offset:    offset,
@@ -476,7 +476,7 @@ func (r *queryResolver) CitiesByCountry(ctx context.Context, countryID uuid.UUID
 }
 
 func (r *queryResolver) City(ctx context.Context, id uuid.UUID) (*gen.CityDetails, error) {
-	c, err := r.GetCityUC.Execute(ctx, requests.GetCityRequest{ID: domain.CityID(id)})
+	c, err := r.GetCityUC.Execute(ctx, dto.GetCityRequest{ID: domain.CityID(id)})
 	if err != nil {
 		return nil, err
 	}
@@ -485,7 +485,7 @@ func (r *queryResolver) City(ctx context.Context, id uuid.UUID) (*gen.CityDetail
 
 func (r *queryResolver) Cities(ctx context.Context, search *string, pagination *gen.PaginationInput) ([]*gen.City, error) {
 	limit, offset := paginationOrDefault(pagination)
-	items, err := r.SearchCitiesUC.Execute(ctx, requests.SearchCitiesRequest{
+	items, err := r.SearchCitiesUC.Execute(ctx, dto.SearchCitiesRequest{
 		Query:  derefString(search),
 		Limit:  limit,
 		Offset: offset,
@@ -502,7 +502,7 @@ func (r *queryResolver) Cities(ctx context.Context, search *string, pagination *
 
 func (r *queryResolver) DistrictsByCity(ctx context.Context, cityID uuid.UUID, pagination *gen.PaginationInput) ([]*gen.District, error) {
 	limit, offset := paginationOrDefault(pagination)
-	items, err := r.GetDistrictsUC.Execute(ctx, requests.GetDistrictsByCityRequest{
+	items, err := r.GetDistrictsUC.Execute(ctx, dto.GetDistrictsByCityRequest{
 		CityID: domain.CityID(cityID),
 		Limit:  limit,
 		Offset: offset,
@@ -519,7 +519,7 @@ func (r *queryResolver) DistrictsByCity(ctx context.Context, cityID uuid.UUID, p
 
 func (r *queryResolver) TransportsByCity(ctx context.Context, cityID uuid.UUID, pagination *gen.PaginationInput) ([]*gen.TransportNode, error) {
 	limit, offset := paginationOrDefault(pagination)
-	items, err := r.GetTransportNodesUC.Execute(ctx, requests.GetTransportNodesByCityRequest{
+	items, err := r.GetTransportNodesUC.Execute(ctx, dto.GetTransportNodesByCityRequest{
 		CityID: domain.CityID(cityID),
 		Limit:  limit,
 		Offset: offset,
@@ -540,7 +540,7 @@ func (r *queryResolver) PlacesByCity(ctx context.Context, cityID uuid.UUID, cate
 	if sortBy != nil {
 		sort = strings.ToLower(string(*sortBy))
 	}
-	items, err := r.GetPlacesByCityUC.Execute(ctx, requests.GetPlacesByCityRequest{
+	items, err := r.GetPlacesByCityUC.Execute(ctx, dto.GetPlacesByCityRequest{
 		CityID:   domain.CityID(cityID),
 		Category: derefString(category),
 		SortBy:   sort,
@@ -555,7 +555,7 @@ func (r *queryResolver) PlacesByCity(ctx context.Context, cityID uuid.UUID, cate
 
 func (r *queryResolver) PlacesByCategory(ctx context.Context, category string, pagination *gen.PaginationInput) ([]*gen.Place, error) {
 	limit, offset := paginationOrDefault(pagination)
-	items, err := r.GetPlacesByCategoryUC.Execute(ctx, requests.GetPlacesByCategoryRequest{
+	items, err := r.GetPlacesByCategoryUC.Execute(ctx, dto.GetPlacesByCategoryRequest{
 		Category: category,
 		Limit:    limit,
 		Offset:   offset,
@@ -567,7 +567,7 @@ func (r *queryResolver) PlacesByCategory(ctx context.Context, category string, p
 }
 
 func (r *queryResolver) Place(ctx context.Context, id uuid.UUID) (*gen.Place, error) {
-	p, err := r.GetPlaceUC.Execute(ctx, requests.GetPlaceRequest{ID: domain.PlaceID(id)})
+	p, err := r.GetPlaceUC.Execute(ctx, dto.GetPlaceRequest{ID: domain.PlaceID(id)})
 	if err != nil {
 		return nil, err
 	}
@@ -579,7 +579,7 @@ func (r *queryResolver) MyTrips(ctx context.Context) ([]*gen.TripSummary, error)
 	if err != nil {
 		return nil, err
 	}
-	items, err := r.GetUserTripsUC.Execute(ctx, requests.GetUserTripsRequest{UserID: domain.UserID(uid)})
+	items, err := r.GetUserTripsUC.Execute(ctx, dto.GetUserTripsRequest{UserID: domain.UserID(uid)})
 	if err != nil {
 		return nil, err
 	}
@@ -601,7 +601,7 @@ func (r *queryResolver) Trip(ctx context.Context, id uuid.UUID) (*gen.Trip, erro
 	if err != nil {
 		return nil, err
 	}
-	t, err := r.GetTripUC.Execute(ctx, requests.GetTripRequest{
+	t, err := r.GetTripUC.Execute(ctx, dto.GetTripRequest{
 		TripID: domain.TripID(id),
 		UserID: domain.UserID(uid),
 	})
@@ -612,7 +612,7 @@ func (r *queryResolver) Trip(ctx context.Context, id uuid.UUID) (*gen.Trip, erro
 }
 
 func (r *queryResolver) HolidaysByDate(ctx context.Context, date time.Time) ([]*gen.Holiday, error) {
-	items, err := r.GetHolidaysUC.Execute(ctx, requests.GetHolidaysByDateRequest{Date: date})
+	items, err := r.GetHolidaysUC.Execute(ctx, dto.GetHolidaysByDateRequest{Date: date})
 	if err != nil {
 		return nil, err
 	}
@@ -660,7 +660,7 @@ func (r *queryResolver) ReviewsByPlace(ctx context.Context, placeID uuid.UUID, o
 	if onlyApproved != nil {
 		only = *onlyApproved
 	}
-	items, err := r.GetReviewsByPlaceUC.Execute(ctx, requests.GetReviewsByPlaceRequest{
+	items, err := r.GetReviewsByPlaceUC.Execute(ctx, dto.GetReviewsByPlaceRequest{
 		PlaceID:      domain.PlaceID(placeID),
 		OnlyApproved: only,
 		Limit:        limit,
@@ -690,7 +690,7 @@ func (r *queryResolver) MyReviews(ctx context.Context, pagination *gen.Paginatio
 		return nil, err
 	}
 	limit, offset := paginationOrDefault(pagination)
-	items, err := r.GetUserReviewsUC.Execute(ctx, requests.GetUserReviewsRequest{
+	items, err := r.GetUserReviewsUC.Execute(ctx, dto.GetUserReviewsRequest{
 		UserID: domain.UserID(uid),
 		Limit:  limit,
 		Offset: offset,
@@ -720,7 +720,7 @@ func (r *queryResolver) ModerationUsers(ctx context.Context, search *string, pag
 		return nil, fmt.Errorf("forbidden")
 	}
 	limit, offset := paginationOrDefault(pagination)
-	resp, err := r.GetUsersUC.Execute(ctx, requests.GetUsersRequest{
+	resp, err := r.GetUsersUC.Execute(ctx, dto.GetUsersRequest{
 		Limit:       limit,
 		Offset:      offset,
 		Search:      derefString(search),
@@ -753,7 +753,7 @@ func (r *queryResolver) ModerationPendingReviews(ctx context.Context, isApproved
 	if isApproved != nil {
 		approved = *isApproved
 	}
-	resp, err := r.GetPendingReviewsUC.Execute(ctx, requests.GetPendingReviewsRequest{
+	resp, err := r.GetPendingReviewsUC.Execute(ctx, dto.GetPendingReviewsRequest{
 		Limit:       limit,
 		Offset:      offset,
 		IsModerator: true,

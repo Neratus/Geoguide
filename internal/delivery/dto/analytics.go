@@ -1,4 +1,4 @@
-package requests
+package dto
 
 import "github.com/Neratus/geoguide/internal/domain"
 

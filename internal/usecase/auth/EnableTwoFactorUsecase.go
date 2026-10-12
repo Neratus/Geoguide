@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"log/slog"
 
+	"github.com/Neratus/geoguide/internal/delivery/dto"
 	"github.com/Neratus/geoguide/internal/domain"
 	"github.com/Neratus/geoguide/internal/domain/interfaces"
-	"github.com/Neratus/geoguide/internal/domain/requests"
 	usecase_errors "github.com/Neratus/geoguide/internal/usecase"
 	"github.com/pquerna/otp/totp"
 )
@@ -39,7 +39,7 @@ func (uc *EnableTwoFactorUseCase) GenerateSecret(ctx context.Context, userID dom
 	return key.Secret(), key.URL(), nil
 }
 
-func (uc *EnableTwoFactorUseCase) VerifyAndEnable(ctx context.Context, req requests.EnableTwoFactorRequest) (backupCodes []string, err error) {
+func (uc *EnableTwoFactorUseCase) VerifyAndEnable(ctx context.Context, req dto.EnableTwoFactorRequest) (backupCodes []string, err error) {
 	uc.logger.Info("verifying and enabling two factor authentication", "user_id", req.UserID)
 	if !totp.Validate(req.Code, req.Secret) {
 		return nil, usecase_errors.ErrInvalidTwoFactorCode

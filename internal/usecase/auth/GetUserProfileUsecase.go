@@ -5,8 +5,8 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/Neratus/geoguide/internal/delivery/dto"
 	"github.com/Neratus/geoguide/internal/domain/interfaces"
-	"github.com/Neratus/geoguide/internal/domain/requests"
 	usecase_errors "github.com/Neratus/geoguide/internal/usecase"
 )
 
@@ -31,7 +31,7 @@ func NewGetUserProfileUseCase(
 	}
 }
 
-func (uc *GetUserProfileUseCase) Execute(ctx context.Context, req requests.GetUserProfileRequest) (*requests.GetUserProfileResponse, error) {
+func (uc *GetUserProfileUseCase) Execute(ctx context.Context, req dto.GetUserProfileRequest) (*dto.GetUserProfileResponse, error) {
 	user, err := uc.userRepo.FindByID(ctx, req.UserID)
 	if err != nil {
 		return nil, err
@@ -52,7 +52,7 @@ func (uc *GetUserProfileUseCase) Execute(ctx context.Context, req requests.GetUs
 	if user.GetBirthDate() != nil {
 		birthDate = user.GetBirthDate().Format("2006-01-02")
 	}
-	return &requests.GetUserProfileResponse{
+	return &dto.GetUserProfileResponse{
 		ID:                 user.GetId(),
 		Username:           user.GetUsername(),
 		Email:              user.GetEmail(),

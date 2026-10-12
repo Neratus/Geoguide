@@ -4,9 +4,9 @@ import (
 	"context"
 	"log/slog"
 
+	"github.com/Neratus/geoguide/internal/delivery/dto"
 	"github.com/Neratus/geoguide/internal/domain"
 	"github.com/Neratus/geoguide/internal/domain/interfaces"
-	"github.com/Neratus/geoguide/internal/domain/requests"
 	usecase_errors "github.com/Neratus/geoguide/internal/usecase"
 	"github.com/google/uuid"
 )
@@ -32,7 +32,7 @@ func NewGetPlaceUseCase(
 	}
 }
 
-func (uc *GetPlaceUseCase) Execute(ctx context.Context, req requests.GetPlaceRequest) (*requests.PlaceResponse, error) {
+func (uc *GetPlaceUseCase) Execute(ctx context.Context, req dto.GetPlaceRequest) (*dto.PlaceResponse, error) {
 	uc.logger.Info("getting place", "place_id", req.ID)
 
 	place, err := uc.placeRepo.FindByID(ctx, req.ID)
@@ -55,7 +55,7 @@ func (uc *GetPlaceUseCase) Execute(ctx context.Context, req requests.GetPlaceReq
 	}
 	place.SetImageURL(imageURL)
 
-	reviewResponses := make([]requests.ReviewResponse, 0, len(reviews))
+	reviewResponses := make([]dto.ReviewResponse, 0, len(reviews))
 	for _, r := range reviews {
 		username := ""
 		user, err := uc.userRepo.FindByID(ctx, r.GetUserID())
@@ -63,7 +63,7 @@ func (uc *GetPlaceUseCase) Execute(ctx context.Context, req requests.GetPlaceReq
 			username = user.GetUsername()
 		}
 
-		reviewResponses = append(reviewResponses, requests.ReviewResponse{
+		reviewResponses = append(reviewResponses, dto.ReviewResponse{
 			ID:         r.GetId(),
 			Rating:     r.GetRating(),
 			Comment:    r.GetComment(),
@@ -79,7 +79,7 @@ func (uc *GetPlaceUseCase) Execute(ctx context.Context, req requests.GetPlaceReq
 	coords := place.GetCoordinates()
 	coordStr := coords.String()
 
-	return &requests.PlaceResponse{
+	return &dto.PlaceResponse{
 		ID:                  place.GetId(),
 		Name:                place.GetName(),
 		Category:            place.GetCategory(),

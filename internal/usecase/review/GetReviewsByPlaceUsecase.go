@@ -4,9 +4,9 @@ import (
 	"context"
 	"log/slog"
 
+	"github.com/Neratus/geoguide/internal/delivery/dto"
 	"github.com/Neratus/geoguide/internal/domain"
 	"github.com/Neratus/geoguide/internal/domain/interfaces"
-	"github.com/Neratus/geoguide/internal/domain/requests"
 	usecase_errors "github.com/Neratus/geoguide/internal/usecase"
 )
 
@@ -25,7 +25,7 @@ func NewGetReviewsByPlaceUseCase(
 	}
 }
 
-func (uc *GetReviewsByPlaceUseCase) Execute(ctx context.Context, req requests.GetReviewsByPlaceRequest) ([]requests.ReviewByPlaceResponse, error) {
+func (uc *GetReviewsByPlaceUseCase) Execute(ctx context.Context, req dto.GetReviewsByPlaceRequest) ([]dto.ReviewByPlaceResponse, error) {
 	uc.logger.Info("getting reviews by place", "place_id", req.PlaceID)
 
 	place, err := uc.placeRepo.FindByID(ctx, req.PlaceID)
@@ -49,9 +49,9 @@ func (uc *GetReviewsByPlaceUseCase) Execute(ctx context.Context, req requests.Ge
 		}
 	}
 
-	resp := make([]requests.ReviewByPlaceResponse, 0, len(filtered))
+	resp := make([]dto.ReviewByPlaceResponse, 0, len(filtered))
 	for _, r := range filtered {
-		resp = append(resp, requests.ReviewByPlaceResponse{
+		resp = append(resp, dto.ReviewByPlaceResponse{
 			ID:                r.GetId(),
 			Rating:            r.GetRating(),
 			Comment:           r.GetComment(),

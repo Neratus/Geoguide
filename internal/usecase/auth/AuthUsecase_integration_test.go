@@ -16,7 +16,6 @@ import (
 
 	"github.com/Neratus/geoguide/internal/domain"
 	"github.com/Neratus/geoguide/internal/domain/interfaces"
-	"github.com/Neratus/geoguide/internal/domain/requests"
 	"github.com/Neratus/geoguide/internal/mocks/builders"
 	configPkg "github.com/Neratus/geoguide/internal/repository/config"
 	postgreSQL "github.com/Neratus/geoguide/internal/repository/postgres/sqlc"
@@ -230,7 +229,7 @@ func TestRegisterUserUseCase_Integration(t *testing.T) {
 	uc := auth.NewRegisterUserUseCase(userRepo, testSession, notifier, taskQueue, logger, rateLimiter)
 
 	t.Run("Success_Register", func(t *testing.T) {
-		req := requests.RegisterUserRequest{
+		req := dto.RegisterUserRequest{
 			Username: "newuser_int",
 			Email:    "new_int@example.com",
 			Password: "StrongPass123!",
@@ -256,7 +255,7 @@ func TestRegisterUserUseCase_Integration(t *testing.T) {
 			Build()
 		require.NoError(t, userRepo.Save(ctx, existingUser))
 
-		req := requests.RegisterUserRequest{
+		req := dto.RegisterUserRequest{
 			Username: "newuser2",
 			Email:    "exist@example.com",
 			Password: "StrongPass123!",
@@ -273,7 +272,7 @@ func TestRegisterUserUseCase_Integration(t *testing.T) {
 			userRepo, testSession, notifier, taskQueue, logger, &restrictedRateLimiter{},
 		)
 
-		req := requests.RegisterUserRequest{
+		req := dto.RegisterUserRequest{
 			Username: "spammer",
 			Email:    "spam@example.com",
 			Password: "StrongPass123!",
@@ -299,7 +298,7 @@ func TestVerifyContactUseCase_Integration(t *testing.T) {
 	verifyUC := auth.NewVerifyContactUseCase(userRepo, testSession, notifier, taskQueue, logger)
 
 	t.Run("Success_VerifyEmail", func(t *testing.T) {
-		registerReq := requests.RegisterUserRequest{
+		registerReq := dto.RegisterUserRequest{
 			Username: "verify_user",
 			Email:    "verify@example.com",
 			Password: "StrongPass123!",
@@ -323,7 +322,7 @@ func TestVerifyContactUseCase_Integration(t *testing.T) {
 		require.NoError(t, iter.Err())
 		require.NotEmpty(t, code, "registration must save verification code into Redis")
 
-		verifyReq := requests.VerifyContactRequest{
+		verifyReq := dto.VerifyContactRequest{
 			UserID:  user.GetId(),
 			Contact: user.GetEmail(),
 			Code:    code,
@@ -351,7 +350,7 @@ func TestGetUserProfileUseCase_Integration(t *testing.T) {
 			Build()
 		require.NoError(t, userRepo.Save(ctx, user))
 
-		req := requests.GetUserProfileRequest{UserID: user.GetId()}
+		req := dto.GetUserProfileRequest{UserID: user.GetId()}
 		resp, err := uc.Execute(ctx, req)
 
 		require.NoError(t, err)
@@ -360,7 +359,7 @@ func TestGetUserProfileUseCase_Integration(t *testing.T) {
 	})
 
 	t.Run("Error_UserNotFound", func(t *testing.T) {
-		req := requests.GetUserProfileRequest{UserID: domain.UserID(uuid.New())}
+		req := dto.GetUserProfileRequest{UserID: domain.UserID(uuid.New())}
 		resp, err := uc.Execute(ctx, req)
 
 		require.Error(t, err)
@@ -389,7 +388,7 @@ func TestUpdateUserProfileUseCase_Integration(t *testing.T) {
 		require.Equal(t, uuid.UUID(user.GetId()), rt)
 
 		newUsername := "updated_user"
-		req := requests.UpdateUserProfileRequest{
+		req := dto.UpdateUserProfileRequest{
 			Token:    "valid-token",
 			Username: &newUsername,
 		}
@@ -406,7 +405,7 @@ func TestUpdateUserProfileUseCase_Integration(t *testing.T) {
 
 	t.Run("Error_InvalidSession", func(t *testing.T) {
 		newUsername := "hacker"
-		req := requests.UpdateUserProfileRequest{
+		req := dto.UpdateUserProfileRequest{
 			Token:    "non-existent-token",
 			Username: &newUsername,
 		}
@@ -425,7 +424,7 @@ func TestUpdateUserProfileUseCase_Integration(t *testing.T) {
 		require.NoError(t, testSession.Set(ctx, "blocked-token", uuid.UUID(user.GetId()), time.Hour))
 
 		newUsername := "blocked_user"
-		req := requests.UpdateUserProfileRequest{
+		req := dto.UpdateUserProfileRequest{
 			Token:    "blocked-token",
 			Username: &newUsername,
 		}
@@ -447,7 +446,7 @@ func TestLogoutUseCase_Integration(t *testing.T) {
 		token := "session-token-xyz"
 		require.NoError(t, testSession.Set(ctx, token, "any-user", time.Hour))
 
-		req := requests.LogoutRequest{Token: token}
+		req := dto.LogoutRequest{Token: token}
 		resp, err := uc.Execute(ctx, req)
 
 		require.NoError(t, err)
@@ -456,7 +455,7 @@ func TestLogoutUseCase_Integration(t *testing.T) {
 	})
 
 	t.Run("Error_InvalidSession", func(t *testing.T) {
-		req := requests.LogoutRequest{Token: "fake-token"}
+		req := dto.LogoutRequest{Token: "fake-token"}
 		resp, err := uc.Execute(ctx, req)
 
 		require.ErrorIs(t, err, usecase_errors.ErrInvalidSession)

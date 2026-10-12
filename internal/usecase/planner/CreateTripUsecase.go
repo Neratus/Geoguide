@@ -4,9 +4,9 @@ import (
 	"context"
 	"log/slog"
 
+	"github.com/Neratus/geoguide/internal/delivery/dto"
 	"github.com/Neratus/geoguide/internal/domain"
 	"github.com/Neratus/geoguide/internal/domain/interfaces"
-	"github.com/Neratus/geoguide/internal/domain/requests"
 )
 
 type CreateTripUseCase struct {
@@ -24,7 +24,7 @@ func NewCreateTripUseCase(
 	}
 }
 
-func (uc *CreateTripUseCase) Execute(ctx context.Context, req requests.CreateTripRequest) (*requests.CreateTripResponse, error) {
+func (uc *CreateTripUseCase) Execute(ctx context.Context, req dto.CreateTripRequest) (*dto.CreateTripResponse, error) {
 	uc.logger.Info("creating trip", "user_id", req.UserID, "title", req.Title)
 
 	trip, err := domain.NewTrip(
@@ -49,7 +49,7 @@ func (uc *CreateTripUseCase) Execute(ctx context.Context, req requests.CreateTri
 	}
 
 	uc.logger.Info("trip created successfully", "trip_id", trip.GetId())
-	return &requests.CreateTripResponse{
+	return &dto.CreateTripResponse{
 		ID:        trip.GetId(),
 		Title:     trip.GetTitle(),
 		StartDate: trip.GetStartDate().Format("2006-01-02"),

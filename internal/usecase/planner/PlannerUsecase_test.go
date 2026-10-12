@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Neratus/geoguide/internal/delivery/dto"
 	"github.com/Neratus/geoguide/internal/domain"
-	"github.com/Neratus/geoguide/internal/domain/requests"
 	"github.com/Neratus/geoguide/internal/mocks"
 	"github.com/Neratus/geoguide/internal/mocks/builders"
 	usecase_errors "github.com/Neratus/geoguide/internal/usecase"
@@ -27,7 +27,7 @@ func TestCreateTripUseCase(t *testing.T) {
 
 	t.Run("Success_CreateTrip", func(t *testing.T) {
 		userID := domain.UserID(uuid.New())
-		req := requests.CreateTripRequest{
+		req := dto.CreateTripRequest{
 			UserID:    userID,
 			Title:     "Поездка в Париж",
 			StartDate: time.Now().Add(24 * time.Hour),
@@ -64,7 +64,7 @@ func TestGetTripUseCase(t *testing.T) {
 		mockRepo.Trips[tripID] = trip
 		mockRepo.Places[tripID] = []*domain.TripPlace{}
 
-		req := requests.GetTripRequest{TripID: tripID, UserID: userID}
+		req := dto.GetTripRequest{TripID: tripID, UserID: userID}
 		resp, err := uc.Execute(ctx, req)
 
 		require.NoError(t, err)
@@ -73,7 +73,7 @@ func TestGetTripUseCase(t *testing.T) {
 	})
 
 	t.Run("Error_TripNotFound", func(t *testing.T) {
-		req := requests.GetTripRequest{TripID: domain.TripID(uuid.New()), UserID: domain.UserID(uuid.New())}
+		req := dto.GetTripRequest{TripID: domain.TripID(uuid.New()), UserID: domain.UserID(uuid.New())}
 		resp, err := uc.Execute(ctx, req)
 
 		require.Error(t, err)
@@ -89,7 +89,7 @@ func TestGetTripUseCase(t *testing.T) {
 		trip, _ := domain.NewTrip(tripID, "Чужая поездка", time.Now(), time.Now().Add(24*time.Hour), 1000, "DRAFT", "", ownerID, domain.ImageID{})
 		mockRepo.Trips[tripID] = trip
 
-		req := requests.GetTripRequest{TripID: tripID, UserID: requesterID}
+		req := dto.GetTripRequest{TripID: tripID, UserID: requesterID}
 		resp, err := uc.Execute(ctx, req)
 
 		require.Error(t, err)
@@ -113,7 +113,7 @@ func TestGetUserTripsUseCase(t *testing.T) {
 		mockRepo.Trips[trip1.GetId()] = trip1
 		mockRepo.Trips[trip2.GetId()] = trip2
 
-		req := requests.GetUserTripsRequest{UserID: userID}
+		req := dto.GetUserTripsRequest{UserID: userID}
 		resp, err := uc.Execute(ctx, req)
 
 		require.NoError(t, err)
@@ -139,7 +139,7 @@ func TestAddPlaceToTripUseCase(t *testing.T) {
 		place := builders.NewPlaceBuilder().Build()
 		mockPlaceRepo.Places[placeID] = place
 
-		req := requests.AddPlaceToTripRequest{
+		req := dto.AddPlaceToTripRequest{
 			TripID:      tripID,
 			PlaceID:     placeID,
 			UserID:      userID,
@@ -155,7 +155,7 @@ func TestAddPlaceToTripUseCase(t *testing.T) {
 	})
 
 	t.Run("Error_PlaceNotFound", func(t *testing.T) {
-		req := requests.AddPlaceToTripRequest{
+		req := dto.AddPlaceToTripRequest{
 			TripID:  domain.TripID(uuid.New()),
 			PlaceID: domain.PlaceID(uuid.New()),
 			UserID:  domain.UserID(uuid.New()),
@@ -171,7 +171,7 @@ func TestAddPlaceToTripUseCase(t *testing.T) {
 		placeID := domain.PlaceID(uuid.New())
 		mockPlaceRepo.Places[placeID] = builders.NewPlaceBuilder().Build()
 
-		req := requests.AddPlaceToTripRequest{
+		req := dto.AddPlaceToTripRequest{
 			TripID:  domain.TripID(uuid.New()),
 			PlaceID: placeID,
 			UserID:  domain.UserID(uuid.New()),
@@ -195,7 +195,7 @@ func TestDeleteTripUseCase(t *testing.T) {
 		trip, _ := domain.NewTrip(tripID, "Тест", time.Now(), time.Now().Add(24*time.Hour), 1000, "DRAFT", "", domain.UserID(uuid.New()), domain.ImageID{})
 		mockRepo.Trips[tripID] = trip
 
-		req := requests.DeleteTripRequest{TripID: tripID}
+		req := dto.DeleteTripRequest{TripID: tripID}
 		err := uc.Execute(ctx, req)
 
 		require.NoError(t, err)
@@ -204,7 +204,7 @@ func TestDeleteTripUseCase(t *testing.T) {
 	})
 
 	t.Run("Error_TripNotFound", func(t *testing.T) {
-		req := requests.DeleteTripRequest{TripID: domain.TripID(uuid.New())}
+		req := dto.DeleteTripRequest{TripID: domain.TripID(uuid.New())}
 		err := uc.Execute(ctx, req)
 
 		require.Error(t, err)

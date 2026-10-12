@@ -6,9 +6,9 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/Neratus/geoguide/internal/delivery/dto"
 	api "github.com/Neratus/geoguide/internal/delivery/gen/openapi"
 	"github.com/Neratus/geoguide/internal/domain"
-	"github.com/Neratus/geoguide/internal/domain/requests"
 	config "github.com/Neratus/geoguide/internal/repository/config"
 	usecase_errors "github.com/Neratus/geoguide/internal/usecase"
 	"github.com/Neratus/geoguide/internal/usecase/admin"
@@ -175,7 +175,7 @@ func (s *Server) RegisterUser(ctx echo.Context) error {
 		birthDate = &req.BirthDate.Time
 	}
 
-	domainReq := requests.RegisterUserRequest{
+	domainReq := dto.RegisterUserRequest{
 		Username:           req.Username,
 		Email:              string(req.Email),
 		Password:           req.Password,
@@ -209,7 +209,7 @@ func (s *Server) VerifyContact(ctx echo.Context) error {
 		return respondError(ctx, http.StatusBadRequest, "invalid request body")
 	}
 
-	domainReq := requests.VerifyContactRequest{
+	domainReq := dto.VerifyContactRequest{
 		UserID:  domain.UserID(req.UserId),
 		Contact: req.Contact,
 		Code:    req.Code,
@@ -232,7 +232,7 @@ func (s *Server) Login(ctx echo.Context) error {
 	ip := getClientIP(ctx.Request())
 	userAgent := ctx.Request().UserAgent()
 
-	domainReq := requests.LoginUserRequest{
+	domainReq := dto.LoginUserRequest{
 		Username: req.Username,
 		Password: req.Password,
 	}
@@ -278,7 +278,7 @@ func (s *Server) Logout(ctx echo.Context) error {
 	}
 
 	token := parts[1]
-	_, err := s.logoutUC.Execute(ctx.Request().Context(), requests.LogoutRequest{Token: token})
+	_, err := s.logoutUC.Execute(ctx.Request().Context(), dto.LogoutRequest{Token: token})
 	if err != nil {
 		return respondError(ctx, http.StatusInternalServerError, err.Error())
 	}
@@ -297,7 +297,7 @@ func (s *Server) EnableTwoFactor(ctx echo.Context) error {
 		return err
 	}
 
-	domainReq := requests.EnableTwoFactorRequest{
+	domainReq := dto.EnableTwoFactorRequest{
 		UserID: userID,
 		Secret: req.Secret,
 		Code:   req.Code,
@@ -323,7 +323,7 @@ func (s *Server) VerifyTwoFactor(ctx echo.Context) error {
 		return respondError(ctx, http.StatusBadRequest, "invalid request body")
 	}
 
-	domainReq := requests.VerifyTwoFactorRequest{
+	domainReq := dto.VerifyTwoFactorRequest{
 		ChallengeID: req.ChallengeId,
 		Code:        req.Code,
 	}
@@ -343,7 +343,7 @@ func (s *Server) GetUserProfile(ctx echo.Context) error {
 		return err
 	}
 
-	profile, err := s.getUserProfileUC.Execute(ctx.Request().Context(), requests.GetUserProfileRequest{UserID: userID})
+	profile, err := s.getUserProfileUC.Execute(ctx.Request().Context(), dto.GetUserProfileRequest{UserID: userID})
 	if err != nil {
 		return respondError(ctx, http.StatusNotFound, err.Error())
 	}
@@ -398,7 +398,7 @@ func (s *Server) UpdateUserProfile(ctx echo.Context) error {
 	}
 	token := parts[1]
 
-	domainReq := requests.UpdateUserProfileRequest{
+	domainReq := dto.UpdateUserProfileRequest{
 		Token:              token,
 		Username:           req.Username,
 		Phone:              req.Phone,
@@ -452,7 +452,7 @@ func (s *Server) ModerateUser(ctx echo.Context) error {
 		return err
 	}
 
-	domainReq := requests.ModerateUserRequest{
+	domainReq := dto.ModerateUserRequest{
 		UserID:      domain.UserID(req.UserId),
 		Block:       req.Block,
 		Reason:      derefString(req.Reason),
@@ -483,7 +483,7 @@ func (s *Server) GetUsers(ctx echo.Context, params api.GetUsersParams) error {
 	offset := derefIntWithDefault(params.Offset, 0)
 	search := derefStringWithDefault(params.Search, "")
 
-	req := requests.GetUsersRequest{
+	req := dto.GetUsersRequest{
 		Limit:       limit,
 		Offset:      offset,
 		Search:      search,
@@ -527,7 +527,7 @@ func (s *Server) GetPendingReviews(ctx echo.Context, params api.GetPendingReview
 	offset := derefIntWithDefault(params.Offset, 0)
 	isApproved := derefBoolWithDefault(params.IsApproved, false)
 
-	req := requests.GetPendingReviewsRequest{
+	req := dto.GetPendingReviewsRequest{
 		Limit:       limit,
 		Offset:      offset,
 		IsModerator: true,
@@ -567,7 +567,7 @@ func (s *Server) GetCountries(ctx echo.Context, params api.GetCountriesParams) e
 	offset := derefIntWithDefault(params.Offset, 0)
 	search := derefStringWithDefault(params.Search, "")
 
-	domainReq := requests.GetCountriesRequest{Limit: limit, Offset: offset, Search: search}
+	domainReq := dto.GetCountriesRequest{Limit: limit, Offset: offset, Search: search}
 	countries, err := s.getCountriesUC.Execute(ctx.Request().Context(), domainReq)
 	if err != nil {
 		return respondError(ctx, http.StatusInternalServerError, err.Error())
@@ -594,7 +594,7 @@ func (s *Server) GetCountries(ctx echo.Context, params api.GetCountriesParams) e
 }
 
 func (s *Server) GetCountry(ctx echo.Context, id openapi_types.UUID) error {
-	domainReq := requests.GetCountryRequest{ID: domain.CountryID(id)}
+	domainReq := dto.GetCountryRequest{ID: domain.CountryID(id)}
 	country, err := s.getCountryUC.Execute(ctx.Request().Context(), domainReq)
 	if err != nil {
 		return respondError(ctx, http.StatusNotFound, err.Error())
@@ -642,7 +642,7 @@ func (s *Server) GetCitiesByCountry(ctx echo.Context, countryId openapi_types.UU
 	limit := derefIntWithDefault(params.Limit, 20)
 	offset := derefIntWithDefault(params.Offset, 0)
 
-	domainReq := requests.GetCitiesByCountryRequest{CountryID: domain.CountryID(countryId), Limit: limit, Offset: offset}
+	domainReq := dto.GetCitiesByCountryRequest{CountryID: domain.CountryID(countryId), Limit: limit, Offset: offset}
 	cities, err := s.getCitiesByCountryUC.Execute(ctx.Request().Context(), domainReq)
 	if err != nil {
 		return respondError(ctx, http.StatusInternalServerError, err.Error())
@@ -667,7 +667,7 @@ func (s *Server) GetCitiesByCountry(ctx echo.Context, countryId openapi_types.UU
 }
 
 func (s *Server) GetCity(ctx echo.Context, id openapi_types.UUID) error {
-	domainReq := requests.GetCityRequest{ID: domain.CityID(id)}
+	domainReq := dto.GetCityRequest{ID: domain.CityID(id)}
 	city, err := s.getCityUC.Execute(ctx.Request().Context(), domainReq)
 	if err != nil {
 		return respondError(ctx, http.StatusNotFound, err.Error())
@@ -696,7 +696,7 @@ func (s *Server) SearchCities(ctx echo.Context, params api.SearchCitiesParams) e
 	offset := derefIntWithDefault(params.Offset, 0)
 	query := derefStringWithDefault(params.Query, "")
 
-	domainReq := requests.SearchCitiesRequest{Query: query, Limit: limit, Offset: offset}
+	domainReq := dto.SearchCitiesRequest{Query: query, Limit: limit, Offset: offset}
 	cities, err := s.searchCitiesUC.Execute(ctx.Request().Context(), domainReq)
 	if err != nil {
 		return respondError(ctx, http.StatusInternalServerError, err.Error())
@@ -724,7 +724,7 @@ func (s *Server) GetDistrictsByCity(ctx echo.Context, cityId openapi_types.UUID,
 	limit := derefIntWithDefault(params.Limit, 20)
 	offset := derefIntWithDefault(params.Offset, 0)
 
-	domainReq := requests.GetDistrictsByCityRequest{CityID: domain.CityID(cityId), Limit: limit, Offset: offset}
+	domainReq := dto.GetDistrictsByCityRequest{CityID: domain.CityID(cityId), Limit: limit, Offset: offset}
 	districts, err := s.getDistrictsUC.Execute(ctx.Request().Context(), domainReq)
 	if err != nil {
 		return respondError(ctx, http.StatusInternalServerError, err.Error())
@@ -750,7 +750,7 @@ func (s *Server) GetTransportNodesByCity(ctx echo.Context, cityId openapi_types.
 	limit := derefIntWithDefault(params.Limit, 20)
 	offset := derefIntWithDefault(params.Offset, 0)
 
-	domainReq := requests.GetTransportNodesByCityRequest{CityID: domain.CityID(cityId), Limit: limit, Offset: offset}
+	domainReq := dto.GetTransportNodesByCityRequest{CityID: domain.CityID(cityId), Limit: limit, Offset: offset}
 	nodes, err := s.getTransportNodesUC.Execute(ctx.Request().Context(), domainReq)
 	if err != nil {
 		return respondError(ctx, http.StatusInternalServerError, err.Error())
@@ -784,7 +784,7 @@ func (s *Server) GetPlaces(ctx echo.Context, params api.GetPlacesParams) error {
 	}
 
 	if params.CityId != nil {
-		domainReq := requests.GetPlacesByCityRequest{
+		domainReq := dto.GetPlacesByCityRequest{
 			CityID:   domain.CityID(*params.CityId),
 			Category: category,
 			Limit:    limit,
@@ -802,7 +802,7 @@ func (s *Server) GetPlaces(ctx echo.Context, params api.GetPlacesParams) error {
 		return respondError(ctx, http.StatusBadRequest, "either cityId or category must be provided")
 	}
 
-	domainReq := requests.GetPlacesByCategoryRequest{
+	domainReq := dto.GetPlacesByCategoryRequest{
 		Category: category,
 		Limit:    limit,
 		Offset:   offset,
@@ -815,7 +815,7 @@ func (s *Server) GetPlaces(ctx echo.Context, params api.GetPlacesParams) error {
 }
 
 func (s *Server) GetPlace(ctx echo.Context, id openapi_types.UUID) error {
-	domainReq := requests.GetPlaceRequest{ID: domain.PlaceID(id)}
+	domainReq := dto.GetPlaceRequest{ID: domain.PlaceID(id)}
 	place, err := s.getPlaceUC.Execute(ctx.Request().Context(), domainReq)
 	if err != nil {
 		return respondError(ctx, http.StatusNotFound, err.Error())
@@ -862,7 +862,7 @@ func (s *Server) CreateTrip(ctx echo.Context) error {
 	}
 	budget := req.Budget
 
-	domainReq := requests.CreateTripRequest{
+	domainReq := dto.CreateTripRequest{
 		UserID:    userID,
 		Title:     req.Title,
 		StartDate: req.StartDate.Time,
@@ -894,7 +894,7 @@ func (s *Server) GetUserTrips(ctx echo.Context) error {
 		return err
 	}
 
-	trips, err := s.getUserTripsUC.Execute(ctx.Request().Context(), requests.GetUserTripsRequest{UserID: userID})
+	trips, err := s.getUserTripsUC.Execute(ctx.Request().Context(), dto.GetUserTripsRequest{UserID: userID})
 	if err != nil {
 		return respondError(ctx, http.StatusInternalServerError, err.Error())
 	}
@@ -919,7 +919,7 @@ func (s *Server) GetTrip(ctx echo.Context, tripId openapi_types.UUID) error {
 		return err
 	}
 
-	domainReq := requests.GetTripRequest{TripID: domain.TripID(tripId), UserID: userID}
+	domainReq := dto.GetTripRequest{TripID: domain.TripID(tripId), UserID: userID}
 	trip, err := s.getTripUC.Execute(ctx.Request().Context(), domainReq)
 	if err != nil {
 		return respondError(ctx, http.StatusNotFound, err.Error())
@@ -969,7 +969,7 @@ func (s *Server) UpdateTrip(ctx echo.Context, tripId openapi_types.UUID) error {
 		return err
 	}
 
-	domainReq := requests.UpdateTripRequest{
+	domainReq := dto.UpdateTripRequest{
 		TripID:    domain.TripID(tripId),
 		UserID:    userID,
 		Title:     req.Title,
@@ -988,7 +988,7 @@ func (s *Server) UpdateTrip(ctx echo.Context, tripId openapi_types.UUID) error {
 }
 
 func (s *Server) DeleteTrip(ctx echo.Context, tripId openapi_types.UUID) error {
-	domainReq := requests.DeleteTripRequest{TripID: domain.TripID(tripId)}
+	domainReq := dto.DeleteTripRequest{TripID: domain.TripID(tripId)}
 	if err := s.deleteTripUC.Execute(ctx.Request().Context(), domainReq); err != nil {
 		return respondError(ctx, http.StatusBadRequest, err.Error())
 	}
@@ -1008,7 +1008,7 @@ func (s *Server) AddPlaceToTrip(ctx echo.Context, tripId openapi_types.UUID) err
 
 	dur := req.DurationMin
 
-	domainReq := requests.AddPlaceToTripRequest{
+	domainReq := dto.AddPlaceToTripRequest{
 		TripID:      domain.TripID(tripId),
 		PlaceID:     domain.PlaceID(req.PlaceId),
 		DayNumber:   req.DayNumber,
@@ -1031,7 +1031,7 @@ func (s *Server) RemovePlaceFromTrip(ctx echo.Context, tripId openapi_types.UUID
 		return err
 	}
 
-	domainReq := requests.RemovePlaceFromTripRequest{
+	domainReq := dto.RemovePlaceFromTripRequest{
 		TripID:  domain.TripID(tripId),
 		PlaceID: domain.PlaceID(params.PlaceId),
 		UserID:  userID,
@@ -1055,7 +1055,7 @@ func (s *Server) CreateReview(ctx echo.Context, placeId openapi_types.UUID) erro
 		return err
 	}
 
-	domainReq := requests.CreateReviewRequest{
+	domainReq := dto.CreateReviewRequest{
 		UserID:    userID,
 		PlaceID:   domain.PlaceID(placeId),
 		Rating:    req.Rating,
@@ -1087,7 +1087,7 @@ func (s *Server) GetReviewsByPlace(ctx echo.Context, placeId openapi_types.UUID,
 	limit := derefIntWithDefault(params.Limit, 20)
 	offset := derefIntWithDefault(params.Offset, 0)
 
-	domainReq := requests.GetReviewsByPlaceRequest{
+	domainReq := dto.GetReviewsByPlaceRequest{
 		PlaceID: domain.PlaceID(placeId), OnlyApproved: onlyApproved, Limit: limit, Offset: offset,
 	}
 	reviews, err := s.getReviewsByPlaceUC.Execute(ctx.Request().Context(), domainReq)
@@ -1108,7 +1108,7 @@ func (s *Server) GetUserReviews(ctx echo.Context, params api.GetUserReviewsParam
 	limit := derefIntWithDefault(params.Limit, 20)
 	offset := derefIntWithDefault(params.Offset, 0)
 
-	reviews, err := s.getUserReviewsUC.Execute(ctx.Request().Context(), requests.GetUserReviewsRequest{
+	reviews, err := s.getUserReviewsUC.Execute(ctx.Request().Context(), dto.GetUserReviewsRequest{
 		UserID: userID, Limit: limit, Offset: offset,
 	})
 	if err != nil {
@@ -1140,7 +1140,7 @@ func (s *Server) DeleteReview(ctx echo.Context, reviewId openapi_types.UUID) err
 	}
 	isModerator := getIsModerator(ctx)
 
-	domainReq := requests.DeleteReviewRequest{
+	domainReq := dto.DeleteReviewRequest{
 		ReviewID: domain.ReviewID(reviewId), UserID: userID, IsModerator: isModerator,
 	}
 	res, err := s.deleteReviewUC.Execute(ctx.Request().Context(), domainReq)
@@ -1164,7 +1164,7 @@ func (s *Server) ModerateReview(ctx echo.Context) error {
 		return err
 	}
 
-	domainReq := requests.ModerateReviewRequest{
+	domainReq := dto.ModerateReviewRequest{
 		ReviewID:    domain.ReviewID(req.ReviewId),
 		Approved:    req.Approved,
 		Comment:     derefString(req.Comment),
@@ -1187,7 +1187,7 @@ func (s *Server) ModerateReview(ctx echo.Context) error {
 }
 
 func (s *Server) GetHolidaysByDate(ctx echo.Context, params api.GetHolidaysByDateParams) error {
-	req := requests.GetHolidaysByDateRequest{Date: params.Date.Time}
+	req := dto.GetHolidaysByDateRequest{Date: params.Date.Time}
 	holidays, err := s.getHolidaysByDateUC.Execute(ctx.Request().Context(), req)
 	if err != nil {
 		return respondError(ctx, http.StatusInternalServerError, "failed to fetch holidays: "+err.Error())
@@ -1245,7 +1245,7 @@ func (s *Server) GenerateReport(ctx echo.Context) error {
 	}
 
 	limit := req.Limit
-	domainReq := requests.GenerateReportRequest{
+	domainReq := dto.GenerateReportRequest{
 		ReportType: string(req.ReportType),
 		Format:     domain.ReportFormat(req.Format),
 		Options: domain.ReportOptions{
@@ -1420,7 +1420,7 @@ func (s *Server) UploadAvatar(ctx echo.Context) error {
 	return ctx.JSON(http.StatusOK, map[string]string{"avatarUrl": avatarURL})
 }
 
-func buildReviewBriefResponses(reviews []requests.ReviewResponse) []api.ReviewBriefResponse {
+func buildReviewBriefResponses(reviews []dto.ReviewResponse) []api.ReviewBriefResponse {
 	out := make([]api.ReviewBriefResponse, 0, len(reviews))
 	for _, rv := range reviews {
 		visitDate := parseDate(rv.VisitDate)
@@ -1440,7 +1440,7 @@ func buildReviewBriefResponses(reviews []requests.ReviewResponse) []api.ReviewBr
 	return out
 }
 
-func buildReviewByPlaceResponses(reviews []requests.ReviewByPlaceResponse) []api.ReviewBriefResponse {
+func buildReviewByPlaceResponses(reviews []dto.ReviewByPlaceResponse) []api.ReviewBriefResponse {
 	out := make([]api.ReviewBriefResponse, 0, len(reviews))
 	for _, rv := range reviews {
 		visitDate := parseDate(rv.VisitDate)
@@ -1460,7 +1460,7 @@ func buildReviewByPlaceResponses(reviews []requests.ReviewByPlaceResponse) []api
 	return out
 }
 
-func buildPlaceResponses(places []requests.PlaceResponse) []api.PlaceResponse {
+func buildPlaceResponses(places []dto.PlaceResponse) []api.PlaceResponse {
 	resp := make([]api.PlaceResponse, 0, len(places))
 	for _, p := range places {
 		reviews := buildReviewBriefResponses(p.Reviews)

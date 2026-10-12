@@ -4,8 +4,8 @@ import (
 	"context"
 	"log/slog"
 
+	"github.com/Neratus/geoguide/internal/delivery/dto"
 	"github.com/Neratus/geoguide/internal/domain/interfaces"
-	"github.com/Neratus/geoguide/internal/domain/requests"
 )
 
 type GetTransportNodesByCityUseCase struct {
@@ -17,7 +17,7 @@ func NewGetTransportNodesByCityUseCase(cityRepo interfaces.CityRepository, logge
 	return &GetTransportNodesByCityUseCase{cityRepo: cityRepo, logger: logger}
 }
 
-func (uc *GetTransportNodesByCityUseCase) Execute(ctx context.Context, req requests.GetTransportNodesByCityRequest) ([]requests.TransportNodeResponse, error) {
+func (uc *GetTransportNodesByCityUseCase) Execute(ctx context.Context, req dto.GetTransportNodesByCityRequest) ([]dto.TransportNodeResponse, error) {
 	uc.logger.Info("getting transport nodes by city", "city_id", req.CityID)
 	nodes, err := uc.cityRepo.FindTransportNodesByCity(ctx, req.CityID)
 	if err != nil {
@@ -31,9 +31,9 @@ func (uc *GetTransportNodesByCityUseCase) Execute(ctx context.Context, req reque
 	if end > len(nodes) {
 		end = len(nodes)
 	}
-	result := make([]requests.TransportNodeResponse, 0, end-start)
+	result := make([]dto.TransportNodeResponse, 0, end-start)
 	for _, n := range nodes[start:end] {
-		result = append(result, requests.TransportNodeResponse{
+		result = append(result, dto.TransportNodeResponse{
 			ID:          n.GetId(),
 			Name:        n.GetName(),
 			NodeType:    string(n.GetNodeType()),

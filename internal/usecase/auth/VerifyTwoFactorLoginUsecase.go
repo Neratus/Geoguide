@@ -5,8 +5,8 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/Neratus/geoguide/internal/delivery/dto"
 	"github.com/Neratus/geoguide/internal/domain/interfaces"
-	"github.com/Neratus/geoguide/internal/domain/requests"
 	"github.com/Neratus/geoguide/internal/pkg/jwt"
 	usecase_errors "github.com/Neratus/geoguide/internal/usecase"
 	"github.com/pquerna/otp/totp"
@@ -31,7 +31,7 @@ func NewVerifyTwoFactorLoginUseCase(
 	}
 }
 
-func (uc *VerifyTwoFactorLoginUseCase) Execute(ctx context.Context, req requests.VerifyTwoFactorRequest) (string, error) {
+func (uc *VerifyTwoFactorLoginUseCase) Execute(ctx context.Context, req dto.VerifyTwoFactorRequest) (string, error) {
 	uc.logger.Info("verifying two factor login", "challenge_id", req.ChallengeID)
 	userID, err := uc.sessionRepo.GetUserIDByChallenge(ctx, req.ChallengeID)
 	if err != nil {

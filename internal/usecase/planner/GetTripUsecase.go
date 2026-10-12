@@ -4,9 +4,9 @@ import (
 	"context"
 	"log/slog"
 
+	"github.com/Neratus/geoguide/internal/delivery/dto"
 	"github.com/Neratus/geoguide/internal/domain"
 	"github.com/Neratus/geoguide/internal/domain/interfaces"
-	"github.com/Neratus/geoguide/internal/domain/requests"
 	usecase_errors "github.com/Neratus/geoguide/internal/usecase"
 )
 
@@ -25,7 +25,7 @@ func NewGetTripUseCase(
 	}
 }
 
-func (uc *GetTripUseCase) Execute(ctx context.Context, req requests.GetTripRequest) (*requests.GetTripResponse, error) {
+func (uc *GetTripUseCase) Execute(ctx context.Context, req dto.GetTripRequest) (*dto.GetTripResponse, error) {
 	uc.logger.Info("getting trip", "trip_id", req.TripID)
 
 	trip, err := uc.tripRepo.FindByID(ctx, req.TripID)
@@ -40,7 +40,7 @@ func (uc *GetTripUseCase) Execute(ctx context.Context, req requests.GetTripReque
 		places = []*domain.TripPlace{}
 	}
 
-	resp := &requests.GetTripResponse{
+	resp := &dto.GetTripResponse{
 		ID:        trip.GetId(),
 		Title:     trip.GetTitle(),
 		StartDate: trip.GetStartDate().Format("2006-01-02"),
@@ -48,7 +48,7 @@ func (uc *GetTripUseCase) Execute(ctx context.Context, req requests.GetTripReque
 		Budget:    trip.GetBudget(),
 		Status:    trip.GetStatus(),
 		Notes:     trip.GetNotes(),
-		Places:    make([]requests.TripPlaceResponse, 0, len(places)),
+		Places:    make([]dto.TripPlaceResponse, 0, len(places)),
 	}
 
 	for _, tp := range places {
@@ -56,7 +56,7 @@ func (uc *GetTripUseCase) Execute(ctx context.Context, req requests.GetTripReque
 		if tp.GetArrivalTime() != nil {
 			arrivalTime = tp.GetArrivalTime().Format("15:04")
 		}
-		resp.Places = append(resp.Places, requests.TripPlaceResponse{
+		resp.Places = append(resp.Places, dto.TripPlaceResponse{
 			PlaceID:     tp.GetPlaceID(),
 			DayNumber:   tp.GetDayNumber(),
 			ArrivalTime: arrivalTime,

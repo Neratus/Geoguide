@@ -4,8 +4,8 @@ import (
 	"context"
 	"log/slog"
 
+	"github.com/Neratus/geoguide/internal/delivery/dto"
 	"github.com/Neratus/geoguide/internal/domain/interfaces"
-	"github.com/Neratus/geoguide/internal/domain/requests"
 	usecase_errors "github.com/Neratus/geoguide/internal/usecase"
 )
 
@@ -24,7 +24,7 @@ func NewLogoutUseCase(
 	}
 }
 
-func (uc *LogoutUseCase) Execute(ctx context.Context, req requests.LogoutRequest) (*requests.LogoutResponse, error) {
+func (uc *LogoutUseCase) Execute(ctx context.Context, req dto.LogoutRequest) (*dto.LogoutResponse, error) {
 	uc.logger.Info("logging out user", "token", req.Token)
 
 	if !uc.sessionRepo.Exists(ctx, req.Token) {
@@ -39,7 +39,7 @@ func (uc *LogoutUseCase) Execute(ctx context.Context, req requests.LogoutRequest
 
 	uc.logger.Info("user logged out successfully", "token", req.Token)
 
-	return &requests.LogoutResponse{
+	return &dto.LogoutResponse{
 		Success: true,
 	}, nil
 }

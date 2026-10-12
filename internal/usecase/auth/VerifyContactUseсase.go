@@ -5,8 +5,8 @@ import (
 	"log/slog"
 	"strings"
 
+	"github.com/Neratus/geoguide/internal/delivery/dto"
 	"github.com/Neratus/geoguide/internal/domain/interfaces"
-	"github.com/Neratus/geoguide/internal/domain/requests"
 	usecase_errors "github.com/Neratus/geoguide/internal/usecase"
 )
 
@@ -34,7 +34,7 @@ func NewVerifyContactUseCase(
 	}
 }
 
-func (uc *VerifyContactUseCase) Execute(ctx context.Context, req requests.VerifyContactRequest) error {
+func (uc *VerifyContactUseCase) Execute(ctx context.Context, req dto.VerifyContactRequest) error {
 	uc.logger.Error("verifying contact", "user_id", req.UserID, "contact", req.Contact)
 	var purpose string
 	if strings.Contains(req.Contact, "@") {

@@ -4,8 +4,8 @@ import (
 	"context"
 	"log/slog"
 
+	"github.com/Neratus/geoguide/internal/delivery/dto"
 	"github.com/Neratus/geoguide/internal/domain/interfaces"
-	"github.com/Neratus/geoguide/internal/domain/requests"
 )
 
 type RemovePlaceFromTripUseCase struct {
@@ -23,7 +23,7 @@ func NewRemovePlaceFromTripUseCase(
 	}
 }
 
-func (uc *RemovePlaceFromTripUseCase) Execute(ctx context.Context, req requests.RemovePlaceFromTripRequest) error {
+func (uc *RemovePlaceFromTripUseCase) Execute(ctx context.Context, req dto.RemovePlaceFromTripRequest) error {
 	uc.logger.Info("removing place from trip", "trip_id", req.TripID, "place_id", req.PlaceID)
 
 	if err := uc.tripRepo.RemovePlace(ctx, req.TripID, req.PlaceID); err != nil {

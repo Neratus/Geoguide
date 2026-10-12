@@ -4,8 +4,8 @@ import (
 	"context"
 	"log/slog"
 
+	"github.com/Neratus/geoguide/internal/delivery/dto"
 	"github.com/Neratus/geoguide/internal/domain/interfaces"
-	"github.com/Neratus/geoguide/internal/domain/requests"
 	"github.com/google/uuid"
 )
 
@@ -27,7 +27,7 @@ func NewGetPlacesByCategoryUseCase(
 	}
 }
 
-func (uc *GetPlacesByCategoryUseCase) Execute(ctx context.Context, req requests.GetPlacesByCategoryRequest) ([]requests.PlaceResponse, error) {
+func (uc *GetPlacesByCategoryUseCase) Execute(ctx context.Context, req dto.GetPlacesByCategoryRequest) ([]dto.PlaceResponse, error) {
 	uc.logger.Info("getting places by category", "category", req.Category)
 
 	places, err := uc.placeRepo.FindByCategory(ctx, req.Category)
@@ -36,7 +36,7 @@ func (uc *GetPlacesByCategoryUseCase) Execute(ctx context.Context, req requests.
 		return nil, err
 	}
 
-	resp := make([]requests.PlaceResponse, 0, len(places))
+	resp := make([]dto.PlaceResponse, 0, len(places))
 	for _, p := range places {
 		imageURL := ""
 		if p.GetImageID() != uuid.Nil {
@@ -49,7 +49,7 @@ func (uc *GetPlacesByCategoryUseCase) Execute(ctx context.Context, req requests.
 		}
 		coord := p.GetCoordinates()
 
-		resp = append(resp, requests.PlaceResponse{
+		resp = append(resp, dto.PlaceResponse{
 			ID:                  p.GetId(),
 			Name:                p.GetName(),
 			Category:            p.GetCategory(),

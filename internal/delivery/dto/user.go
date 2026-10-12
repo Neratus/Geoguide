@@ -1,4 +1,4 @@
-package requests
+package dto
 
 import (
 	"time"
@@ -27,4 +27,22 @@ type UpdateUserProfileResponse struct {
 	AvatarURL          string
 	FavoriteCategories []string
 	IsBlocked          bool
+}
+
+type GetUserProfileRequest struct {
+	UserID domain.UserID
+}
+
+type GetUserProfileResponse struct {
+	ID                 domain.UserID
+	Username           string
+	Email              string
+	Phone              string
+	RegisteredAt       string
+	BirthDate          string
+	CountryOfResidence string
+	AvatarURL          string
+	FavoriteCategories []string
+	IsBlocked          bool
+	Role               string
 }
